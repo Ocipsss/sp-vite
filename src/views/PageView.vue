@@ -1,11 +1,12 @@
 <template>
-  <div class="h-full overflow-hidden">
+  <div class="min-h-full w-full">
+    
     <component :is="activeComponent" v-if="activeComponent" />
 
-    <div v-else class="p-8 animate-slide-up">
+    <div v-else class="p-8 animate-slide-up h-full flex flex-col">
       <div class="flex items-center gap-4 mb-8">
         <div class="w-14 h-14 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-blue-600">
-          <i :class="currentIcon" class="text-3xl"></i>
+          <i :class="currentIcon || 'ri-bookmark-3-line'" class="text-3xl"></i>
         </div>
         <div>
           <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter leading-none">
@@ -15,7 +16,7 @@
         </div>
       </div>
 
-      <div class="bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] h-[60vh] flex flex-col items-center justify-center text-center p-10">
+      <div class="bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex-1 flex flex-col items-center justify-center text-center p-10 min-h-[60vh]">
         <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-4">
           <i class="ri-hammer-line text-4xl text-slate-300"></i>
         </div>
@@ -29,24 +30,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, shallowRef, markRaw } from 'vue';
+import { computed, markRaw } from 'vue';
 import { useRoute } from 'vue-router';
 
-// IMPORT HALAMAN YANG SUDAH JADI
+// IMPORT HALAMAN
 import Penjualan from '../components/pages/Penjualan.vue';
+import DaftarProduk from '../components/pages/DaftarProduk.vue'; 
 
 const route = useRoute();
 
-// Mapping rute ke komponen
-// Gunakan markRaw agar Vue tidak memantau jeroan komponen (lebih enteng)
 const componentsMap: Record<string, any> = {
   'Penjualan': markRaw(Penjualan),
+  'Daftar Produk': markRaw(DaftarProduk),
 };
 
 const title = computed(() => (route.name as string) || 'Halaman');
-const currentIcon = computed(() => (route.meta.icon as string) || 'ri-bookmark-3-line');
+const currentIcon = computed(() => (route.meta?.icon as string) || 'ri-bookmark-3-line');
 
-// Ambil komponen berdasarkan nama rute yang aktif
 const activeComponent = computed(() => componentsMap[route.name as string]);
 </script>
 

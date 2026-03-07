@@ -5,6 +5,7 @@ import { db } from "../database";
 
 let isSyncing = false;
 
+// --- 1. LOGIKA PUSH: DARI LOKAL KE CLOUD ---
 const syncToCloud = async (table: string, id: string | number, data: any) => {
   if (isSyncing) return;
   try {
@@ -25,6 +26,7 @@ export const setupSyncHooks = () => {
 
   allTables.forEach((tableName) => {
     const table = (db as any)[tableName];
+    if (!table) return;
     
     table.hook('creating', (pk: any, obj: any) => {
       syncToCloud(tableName, pk || obj.id, obj);
@@ -38,26 +40,44 @@ export const setupSyncHooks = () => {
       syncToCloud(tableName, pk, null);
     });
   });
-}; // <--- INI PENTING: Tutup fungsi setupSyncHooks di sini
+};
 
-export const startPullSync = () => { // <--- Sekarang fungsi ini berdiri sendiri dan bisa di-export
+// --- 2. LOGIKA PULL: DARI CLOUD KE LOKAL ---
+export const startPullSync = () => {
   const allTables = ['products', 'product_packages', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions', 'services', 'settings'];
 
   allTables.forEach(tableName => {
     const tableRef = ref(fdb, tableName);
     const table = (db as any)[tableName];
+    if (!table) return;
+
+    // FUNGSI KRUSIAL: Memastikan data punya ID agar Dexie tidak error
+    const prepareData = (snapshot: any) => {
+      const val = snapshot.val();
+      if (!val) return null;
+      return {
+        ...val,
+        id: val.id || snapshot.key // Pakai key Firebase jika 'id' kosong
+      };
+    };
 
     onChildAdded(tableRef, async (snapshot) => {
-      const data = snapshot.val();
+      const data = prepareData(snapshot);
       if (data) {
-        isSyncing = true; 
-        await table.put(data); 
-        isSyncing = false;
+        try {
+          isSyncing = true; 
+          await table.put(data); 
+          console.log(`[SYNC] Syncing ${tableName}: ${data.name || data.id}`);
+        } catch (err) {
+          console.error(`[SYNC ERROR] Gagal simpan ${tableName}:`, err);
+        } finally {
+          isSyncing = false;
+        }
       }
     });
 
     onChildChanged(tableRef, async (snapshot) => {
-      const data = snapshot.val();
+      const data = prepareData(snapshot);
       if (data) {
         isSyncing = true; 
         await table.put(data); 
@@ -68,7 +88,7 @@ export const startPullSync = () => { // <--- Sekarang fungsi ini berdiri sendiri
     onChildRemoved(tableRef, async (snapshot) => {
       const id = snapshot.key;
       if (id) {
-        const targetId = isNaN(Number(id)) ? id : Number(id);
+        const targetId = isNaN(Number(id)) ? id : id; // Tetap pakai string jika itu UID
         isSyncing = true; 
         await table.delete(targetId); 
         isSyncing = false;

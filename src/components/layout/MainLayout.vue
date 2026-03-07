@@ -11,37 +11,47 @@
       <nav class="flex-1 space-y-6">
         <div v-for="(group, gIndex) in menuGroups" :key="gIndex" class="space-y-1">
           <div 
-  v-for="item in group.items" :key="item.name"
-  @click="navigateTo(item.name)" 
-  :class="menuClass(item.name)"
->
-  <i :class="item.icon" class="text-xl"></i>
-  <span class="font-medium text-[15px] whitespace-nowrap">{{ item.name }}</span>
-</div>
-          
+            v-for="item in group.items" :key="item.name"
+            @click="navigateTo(item.name)" 
+            :class="menuClass(item.name)"
+          >
+            <i :class="item.icon" class="text-xl"></i>
+            <span class="font-medium text-[15px] whitespace-nowrap">{{ item.name }}</span>
+          </div>
           <div v-if="gIndex < menuGroups.length - 1" class="pt-4 pb-2">
             <div class="h-px bg-white/5 w-full"></div>
           </div>
         </div>
       </nav>
 
-      <div class="mt-10 mb-4 flex items-center gap-4 p-4 bg-slate-800/30 rounded-2xl border border-white/5 shrink-0">
-        <div class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black shadow-lg shadow-blue-900/20">A</div>
-        <div>
-          <p class="text-sm font-bold">Admin Kasir</p>
-          <p class="text-[10px] text-green-500 font-black uppercase tracking-wider">● Online</p>
-        </div>
+      <div class="mt-auto pt-6 border-t border-white/5">
+        <button 
+          @click="handlePullFirebase" 
+          :disabled="isPulling"
+          class="w-full flex items-center gap-4 px-5 py-4 rounded-[2rem] transition-all active:scale-95 border border-white/5"
+          :class="isPulling ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'"
+        >
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20">
+            <i class="ri-cloud-download-line text-xl" :class="{'animate-bounce': isPulling}"></i>
+          </div>
+          <div class="text-left">
+            <span class="block text-[10px] font-black uppercase tracking-widest leading-none mb-1">
+              {{ isPulling ? 'Proses...' : 'Update Data' }}
+            </span>
+            <span class="block text-[8px] font-bold opacity-60 uppercase tracking-tighter italic">Sinkron Cloud</span>
+          </div>
+        </button>
       </div>
     </aside>
 
     <div 
       :class="[
         'fixed inset-0 bg-[#f1f5f9] transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.185)] z-10 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex flex-col',
-        isSidebarOpen ? 'translate-x-[60%] scale-[0.95] rounded-[40px] cursor-pointer overflow-hidden select-none' : 'translate-x-0 scale-100 rounded-none'
+        isSidebarOpen ? 'translate-x-[70%] scale-[0.95] rounded-[40px] cursor-pointer overflow-hidden select-none' : 'translate-x-0 scale-100 rounded-none overflow-hidden'
       ]"
       @click="isSidebarOpen ? isSidebarOpen = false : null"
     >
-      <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0">
+      <header class="h-16 bg-white border-b border-slate-200 flex items-center gap-3 px-4 shrink-0">
         <button 
           @click.stop="isSidebarOpen = !isSidebarOpen"
           class="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl transition-all border border-slate-100"
@@ -49,50 +59,117 @@
           <i :class="isSidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'" class="text-2xl"></i>
         </button>
 
-        <div class="flex items-center gap-3">
-          <span class="text-[11px] font-black text-slate-400 uppercase tracking-widest">{{ activePage }}</span>
-          <div class="w-1 bg-slate-100 h-6"></div>
-          <i class="ri-notification-3-line text-xl text-slate-300"></i>
+        <div class="flex-1">
+          <GlobalSearch v-model="cart.searchQuery" placeholder="Cari barang..." />
         </div>
       </header>
 
-      <main class="flex-1 overflow-y-auto bg-[#f1f5f9] relative">
-        <slot />
-        <div v-if="isSidebarOpen" class="absolute inset-0 z-50"></div>
-      </main>
+      <main class="flex-1 overflow-y-auto bg-[#f1f5f9] relative h-full min-h-0">
+  <slot />
+  <div v-if="isSidebarOpen" class="absolute inset-0 z-50 bg-transparent"></div>
+</main>
+
+    </div>
+
+    <div v-if="cart.isScannerOpen" class="fixed inset-0 z-[100] bg-white flex flex-col p-6 animate-zoom-in">
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex flex-col">
+                <span class="text-xs font-black uppercase tracking-widest text-blue-600">Scanner Aktif</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Arahkan ke Barcode Produk</span>
+            </div>
+            <button @click="cart.toggleScanner(false)" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                <i class="ri-close-line text-xl"></i>
+            </button>
+        </div>
+        <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 bg-slate-50 aspect-square shadow-inner"></div>
+        <div class="mt-auto py-8 text-center">
+            <span class="text-[9px] text-gray-400 font-black tracking-[0.3em] uppercase">Sinar Pagi POS System</span>
+        </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useCartStore } from '../../stores/cart';
+import GlobalSearch from './GlobalSearch.vue';
+import { db } from '../../database';
+import { Html5Qrcode } from "html5-qrcode";
+import { startPullSync } from '../../api/sync';
 
-// State Sidebar (Buka/Tutup)
+const cart = useCartStore();
 const isSidebarOpen = ref(false);
-
-// Inisialisasi Router & Route
+const isPulling = ref(false);
 const router = useRouter();
 const route = useRoute();
 
-/**
- * KUNCI: Mengambil nama halaman aktif langsung dari rute saat ini.
- * Ini memastikan sidebar tetap sinkron meskipun user menekan tombol 'Back' di browser.
- */
+let html5QrCode: Html5Qrcode | null = null;
+
 const activePage = computed(() => route.name as string);
 
-/**
- * Fungsi Navigasi:
- * Memindahkan halaman dan menutup sidebar secara otomatis jika sedang terbuka.
- */
 const navigateTo = (name: string) => {
   router.push({ name });
   isSidebarOpen.value = false; 
 };
 
-/**
- * Data Menu Groups (Sesuai Struktur Sinar Pagi POS)
- */
+const handlePullFirebase = async () => {
+  isPulling.value = true;
+  try {
+    startPullSync();
+    setTimeout(() => {
+      isPulling.value = false;
+      alert("✅ Sinkronisasi Cloud Aktif.");
+      window.location.reload(); 
+    }, 3000);
+  } catch (err) {
+    alert("Gagal koneksi cloud");
+    isPulling.value = false;
+  }
+};
+
+const startScanner = async () => {
+  try {
+    html5QrCode = new Html5Qrcode("reader");
+    const config = { 
+      fps: 10, 
+      qrbox: { width: 250, height: 250 },
+      aspectRatio: 1.0 
+    };
+    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, () => {});
+  } catch (err) {
+    console.error(err);
+    cart.toggleScanner(false);
+  }
+};
+
+const stopScanner = async () => {
+  if (html5QrCode && html5QrCode.isScanning) {
+    await html5QrCode.stop();
+    await html5QrCode.clear();
+    html5QrCode = null;
+  }
+};
+
+const onScanSuccess = async (decodedText: string) => {
+  await stopScanner();
+  cart.toggleScanner(false);
+  const product = await db.products.where('code').equals(decodedText).first();
+  if (product) {
+    cart.addToCart(product);
+    if (navigator.vibrate) navigator.vibrate(100);
+  } else {
+    alert(`Barcode ${decodedText} tidak terdaftar.`);
+  }
+};
+
+watch(() => cart.isScannerOpen, (isOpen) => {
+  if (isOpen) setTimeout(() => startScanner(), 300);
+  else stopScanner();
+});
+
+onBeforeUnmount(() => stopScanner());
+
 const menuGroups = [
   { items: [
     { name: 'Dashboard', icon: 'ri-dashboard-3-line' },
@@ -122,18 +199,20 @@ const menuGroups = [
   ]}
 ];
 
-/**
- * Styling Class Dinamis (Menggunakan Palette Warna 'sp-')
- */
 const menuClass = (page: string) => [
   'flex items-center gap-4 px-5 py-3 rounded-2xl cursor-pointer transition-all duration-200 group',
   activePage.value === page 
-    ? 'text-sp-gold bg-sp-gold/10 shadow-[0_0_20px_rgba(251,191,36,0.1)] font-bold' 
-    : 'text-sp-muted hover:text-white hover:bg-white/5'
+    ? 'text-[#fbbf24] bg-[#fbbf24]/10 shadow-[0_0_20px_rgba(251,191,36,0.1)] font-bold' 
+    : 'text-slate-400 hover:text-white hover:bg-white/5'
 ];
 </script>
 
 <style scoped>
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.animate-zoom-in { animation: zoomIn 0.2s ease-out; }
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
 </style>
