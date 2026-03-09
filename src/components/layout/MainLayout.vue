@@ -28,7 +28,7 @@
         <button 
           @click="handlePullFirebase" 
           :disabled="isPulling"
-          class="w-full flex items-center gap-4 px-5 py-4 rounded-[2rem] transition-all active:scale-95 border border-white/5"
+          class="w-full flex items-center gap-4 px-5 py-4 rounded-4xl transition-all active:scale-95 border border-white/5"
           :class="isPulling ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'"
         >
           <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20">
@@ -71,7 +71,7 @@
 
     </div>
 
-    <div v-if="cart.isScannerOpen" class="fixed inset-0 z-[100] bg-white flex flex-col p-6 animate-zoom-in">
+    <div v-if="cart.isScannerOpen" class="fixed inset-0 z-100 bg-white flex flex-col p-6 animate-zoom-in">
         <div class="flex justify-between items-center mb-6">
             <div class="flex flex-col">
                 <span class="text-xs font-black uppercase tracking-widest text-blue-600">Scanner Aktif</span>
@@ -95,8 +95,9 @@ import { useRouter, useRoute } from 'vue-router';
 import { useCartStore } from '../../stores/cart';
 import GlobalSearch from './GlobalSearch.vue';
 import { db } from '../../database';
-import { Html5Qrcode } from "html5-qrcode";
 import { startPullSync } from '../../api/sync';
+// Import Composable Baru
+import { useScanner } from '../../composables/useScanner';
 
 const cart = useCartStore();
 const isSidebarOpen = ref(false);
@@ -104,7 +105,8 @@ const isPulling = ref(false);
 const router = useRouter();
 const route = useRoute();
 
-let html5QrCode: Html5Qrcode | null = null;
+// Gunakan composable scanner
+const { startScanner, stopScanner } = useScanner();
 
 const activePage = computed(() => route.name as string);
 
@@ -128,33 +130,12 @@ const handlePullFirebase = async () => {
   }
 };
 
-const startScanner = async () => {
-  try {
-    html5QrCode = new Html5Qrcode("reader");
-    const config = { 
-      fps: 10, 
-      qrbox: { width: 250, height: 250 },
-      aspectRatio: 1.0 
-    };
-    await html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess, () => {});
-  } catch (err) {
-    console.error(err);
-    cart.toggleScanner(false);
-  }
-};
-
-const stopScanner = async () => {
-  if (html5QrCode && html5QrCode.isScanning) {
-    await html5QrCode.stop();
-    await html5QrCode.clear();
-    html5QrCode = null;
-  }
-};
-
+// Logika ketika scan berhasil
 const onScanSuccess = async (decodedText: string) => {
   await stopScanner();
   cart.toggleScanner(false);
-  const product = await db.products.where('code').equals(decodedText).first();
+  
+  const product = await db.table('products').where('code').equals(decodedText).first();
   if (product) {
     cart.addToCart(product);
     if (navigator.vibrate) navigator.vibrate(100);
@@ -163,13 +144,24 @@ const onScanSuccess = async (decodedText: string) => {
   }
 };
 
+// Watcher untuk reaktifitas modal scanner
 watch(() => cart.isScannerOpen, (isOpen) => {
-  if (isOpen) setTimeout(() => startScanner(), 300);
-  else stopScanner();
+  if (isOpen) {
+    // Delay 300ms agar elemen "reader" muncul di DOM sebelum di-init
+    setTimeout(() => {
+      startScanner("reader", onScanSuccess).catch(() => {
+        cart.toggleScanner(false);
+      });
+    }, 300);
+  } else {
+    stopScanner();
+  }
 });
 
+// Pembersihan otomatis saat pindah halaman/komponen dihancurkan
 onBeforeUnmount(() => stopScanner());
 
+// --- DATA MENU & STYLING ---
 const menuGroups = [
   { items: [
     { name: 'Dashboard', icon: 'ri-dashboard-3-line' },

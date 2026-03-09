@@ -126,9 +126,9 @@ onUnmounted(() => {
       <div 
         v-for="p in filteredProducts" :key="p.id" 
         @click="openDetail(p)"
-        class="bg-white p-4 rounded-[2rem] border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer"
+        class="bg-white p-4 rounded-4xl border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer"
       >
-        <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
           <img v-if="p.image" :src="p.image" class="w-full h-full object-cover">
           <i v-else class="ri-shopping-bag-3-fill text-blue-300 text-xl"></i>
         </div>
@@ -154,7 +154,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-if="isDetailModalOpen && detailProduct" class="fixed inset-0 z-[110] flex items-end justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="isDetailModalOpen = false">
+    <div v-if="isDetailModalOpen && detailProduct" class="fixed inset-0 z-110 flex items-end justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="isDetailModalOpen = false">
       <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 animate-slide-up shadow-2xl">
         <div class="flex justify-center mb-4"><div class="w-12 h-1.5 bg-slate-100 rounded-full"></div></div>
         
@@ -183,12 +183,12 @@ onUnmounted(() => {
 
         <div class="flex gap-3">
           <button @click="deleteProduct(detailProduct.id)" class="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest">Hapus</button>
-          <button @click="openEdit(detailProduct)" class="flex-[2] py-4 bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg">Edit Data</button>
+          <button @click="openEdit(detailProduct)" class="flex-2 py-4 bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg">Edit Data</button>
         </div>
       </div>
     </div>
 
-    <div v-if="isEditModalOpen && editingProduct" class="fixed inset-0 z-[120] flex items-end justify-center p-4 bg-slate-900/80 backdrop-blur-md" @click.self="isEditModalOpen = false">
+    <div v-if="isEditModalOpen && editingProduct" class="fixed inset-0 z-120 flex items-end justify-center p-4 bg-slate-900/80 backdrop-blur-md" @click.self="isEditModalOpen = false">
       <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate-slide-up overflow-y-auto max-h-[90vh]">
         <div class="flex justify-between items-center mb-6">
           <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Update Produk</h3>

@@ -1,20 +1,36 @@
 <template>
   <div class="flex flex-col h-[calc(100vh-110px)] relative overflow-hidden bg-slate-50">
     
-    <div class="absolute top-2 right-4 z-50 flex justify-end items-center pointer-events-none">
-      <div class="relative flex items-center bg-white border border-blue-200 rounded-full px-3 py-2 shadow-md active:scale-95 transition-all pointer-events-auto cursor-pointer">
-        <i class="ri-customer-service-2-line text-blue-600 text-sm"></i>
-        <select 
-          @change="handleSelectJasa"
-          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+    <div class="absolute top-2 left-4 right-4 z-50 flex justify-between items-center pointer-events-none">
+      
+      <button 
+        v-if="cart.items.length > 0"
+        @click="cart.resetCart()"
+        class="w-9 h-9 bg-white border border-red-100 rounded-full shadow-md flex items-center justify-center text-red-500 active:scale-90 active:bg-red-50 transition-all pointer-events-auto shadow-red-100/50"
+        title="Reset Keranjang"
+      >
+        <i class="ri-refresh-line text-lg font-bold"></i>
+      </button>
+      <div v-else></div>
+
+      <transition name="fade">
+        <div 
+          v-if="showJasaButton"
+          class="relative flex items-center bg-white border border-blue-200 rounded-full px-3 py-2 shadow-md active:scale-95 transition-all pointer-events-auto cursor-pointer"
         >
-          <option value="" disabled selected>+ JASA</option>
-          <option v-for="j in listJasa" :key="j.id" :value="j.id">
-            {{ j.name }} (+{{ formatRupiah(j.price).replace('Rp', '').trim() }})
-          </option>
-        </select>
-        <span class="text-[10px] font-black uppercase text-blue-700 ml-1.5 tracking-tighter">Tambah Jasa</span>
-      </div>
+          <i class="ri-customer-service-2-line text-blue-600 text-sm"></i>
+          <select 
+            @change="onJasaSelected"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          >
+            <option value="" disabled selected>+ JASA</option>
+            <option v-for="j in listJasa" :key="j.id" :value="j.id">
+              {{ j.name }} (+{{ formatRupiah(j.price).replace('Rp', '').trim() }})
+            </option>
+          </select>
+          <span class="text-[10px] font-black uppercase text-blue-700 ml-1.5 tracking-tighter">Tambah Jasa</span>
+        </div>
+      </transition>
     </div>
 
     <div 
@@ -34,7 +50,7 @@
         <div v-else class="flex flex-col gap-3">
           <div 
             v-for="item in cart.items" :key="item.cartId" 
-            class="bg-slate-50 p-4 rounded-[2rem] border border-slate-100 flex flex-col gap-3 transition-all"
+            class="bg-slate-50 p-4 rounded-4xl border border-slate-100 flex flex-col gap-3 transition-all"
           >
             <div class="flex items-center justify-between">
               <div class="min-w-0 flex-1">
@@ -62,9 +78,9 @@
                 </div>
               </div>
               <div class="flex items-center gap-2 shrink-0">
-                <button @click="updateJasaQty(item, -1)" class="w-7 h-7 flex items-center justify-center text-orange-500 font-black bg-white border border-blue-100 rounded-lg">-</button>
+                <button @click="cart.updateExtraQty(item.cartId, -1)" class="w-7 h-7 flex items-center justify-center text-orange-500 font-black bg-white border border-blue-100 rounded-lg">-</button>
                 <span class="text-[11px] font-black text-slate-700 min-w-4.5 text-center">{{ item.extraChargeQty }}</span>
-                <button @click="updateJasaQty(item, 1)" class="w-7 h-7 flex items-center justify-center text-blue-600 font-black bg-white border border-blue-100 rounded-lg">+</button>
+                <button @click="cart.updateExtraQty(item.cartId, 1)" class="w-7 h-7 flex items-center justify-center text-blue-600 font-black bg-white border border-blue-100 rounded-lg">+</button>
               </div>
             </div>
           </div>
@@ -144,14 +160,13 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch, nextTick, computed } from 'vue';
-import { useCartStore, type CartItem } from "../../stores/cart";
+import { useCartStore } from "../../stores/cart";
 import { db } from "../../database";
 
 const cart = useCartStore();
 const scrollContainer = ref<HTMLElement | null>(null);
-const listJasa = ref<any[]>([]);
+const listJasa = ref<Service[]>([]);
 
-// Interface untuk type safety
 interface Service {
   id: number;
   name: string;
@@ -164,7 +179,14 @@ const formatRupiah = (val: number) => {
   }).format(val || 0);
 };
 
-// Label tombol dinamis sesuai kondisi uang
+// LOGIKA: Tombol Jasa hanya muncul jika ada kategori tertentu di keranjang
+const showJasaButton = computed(() => {
+  const needsService = ['Minyak', 'Kurma', 'Madu', 'Kitab'];
+  return cart.items.some(item => 
+    item.category && needsService.includes(item.category)
+  );
+});
+
 const buttonLabel = computed(() => {
   if (cart.cashAmount === 0 || !cart.cashAmount) return 'UANG PAS';
   if (cart.cashAmount < cart.totalBelanja) return 'UANG KURANG';
@@ -172,7 +194,7 @@ const buttonLabel = computed(() => {
 });
 
 onMounted(async () => {
-  listJasa.value = await db.table('services').toArray(); // Dexie table call
+  listJasa.value = await db.table('services').toArray();
   scrollToBottom();
 });
 
@@ -187,35 +209,23 @@ const scrollToBottom = () => {
   });
 };
 
-// Deep Watcher: Scroll jika isi keranjang berubah
 watch(() => cart.items, () => { scrollToBottom(); }, { deep: true });
 
-const handleSelectJasa = (event: any) => {
-  const selectedId = event.target.value;
-  const selected = listJasa.value.find((j: Service) => j.id == selectedId);
+const onJasaSelected = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  const selectedId = target.value;
+  const selected = listJasa.value.find((j: Service) => j.id == Number(selectedId));
   
   if (selected && cart.items.length > 0) {
     const lastItem = cart.items[cart.items.length - 1];
-    lastItem.extraCharge = selected.price;
-    lastItem.extraChargeName = selected.name;
-    lastItem.extraChargeQty = 1;
-    
-    if (!lastItem.name.includes(`(${selected.name})`)) {
-      lastItem.name += ` (${selected.name})`;
+    if (lastItem) {
+      cart.setExtraCharge(lastItem.cartId, { 
+        name: selected.name, 
+        price: selected.price 
+      });
     }
   }
-  event.target.value = "";
-};
-
-const updateJasaQty = (item: CartItem, n: number) => {
-  item.extraChargeQty = Math.max(0, (item.extraChargeQty || 0) + n);
-  if (item.extraChargeQty === 0) {
-    if (item.extraChargeName) {
-        item.name = item.name.replace(` (${item.extraChargeName})`, "");
-    }
-    item.extraCharge = 0;
-    item.extraChargeName = "";
-  }
+  target.value = "";
 };
 
 const handleMainButtonClick = () => {
@@ -228,7 +238,6 @@ const handleMainButtonClick = () => {
 
 const handleCheckout = async () => {
   if (cart.items.length === 0) return;
-  
   try {
     const trxId = await cart.processCheckout();
     console.log("Transaksi Berhasil", trxId);

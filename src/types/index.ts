@@ -10,6 +10,7 @@ export interface Product {
   price_modal: number;
   price_sell: number;
   qty: number;
+  qty_reduce: number;
   pack_price: number;
   pack_size: number;
   updatedAt: string;

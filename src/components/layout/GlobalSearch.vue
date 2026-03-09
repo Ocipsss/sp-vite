@@ -1,5 +1,5 @@
 <template>
-  <div class="flex gap-2 w-full px-1">
+  <div v-if="route.meta.showScanner" class="flex gap-2 w-full px-1 animate-fade-in">
     <div class="relative flex-1 group">
       <input 
         :value="modelValue" 
@@ -17,33 +17,32 @@
         </button>
       </div>
 
-              <transition name="fade">
-      <div v-if="isFocused && suggestions.length > 0 && modelValue" 
-        class="absolute top-full right-0 mt-2 bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden z-[999]"
-        style="left: -3rem; width: auto;" 
-      >
-        <div class="max-h-[350px] overflow-y-auto no-scrollbar">
-          <div 
-            v-for="p in suggestions" :key="p.id"
-            @click="selectProduct(p)"
-            class="px-6 py-4 hover:bg-slate-50 border-b border-slate-50 flex items-center gap-4 active:bg-blue-50 transition-colors cursor-pointer"
-          >
-            <div class="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center shrink-0">
-              <i class="ri-search-line text-slate-300 text-xs"></i>
-            </div>
-            <div class="flex-1 min-w-0 text-left">
-              <div class="text-[13px] font-black text-slate-700 uppercase truncate" v-html="highlightText(p.name)"></div>
-              <div class="text-[9px] text-slate-400 font-bold tracking-wider uppercase">{{ p.code || 'Tanpa Kode' }}</div>
-            </div>
-            <div class="text-right shrink-0">
-              <div class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</div>
-              <div class="text-[9px] font-bold text-slate-300 uppercase">{{ p.qty }} {{ p.unit }}</div>
+      <transition name="fade">
+        <div v-if="isFocused && suggestions.length > 0 && modelValue" 
+          class="absolute top-full right-0 mt-2 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden z-999"
+          style="left: -1rem; width: calc(100% + 2rem);" 
+        >
+          <div class="max-h-80 overflow-y-auto no-scrollbar">
+            <div 
+              v-for="p in suggestions" :key="p.id"
+              @click="selectProduct(p)"
+              class="px-6 py-4 hover:bg-slate-50 border-b border-slate-50 flex items-center gap-4 active:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <div class="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center shrink-0">
+                <i class="ri-search-line text-slate-300 text-xs"></i>
+              </div>
+              <div class="flex-1 min-w-0 text-left">
+                <div class="text-[13px] font-black text-slate-700 uppercase truncate" v-html="highlightText(p.name, modelValue)"></div>
+                <div class="text-[9px] text-slate-400 font-bold tracking-wider uppercase">{{ p.code || 'Tanpa Kode' }}</div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</div>
+                <div class="text-[9px] font-bold text-slate-300 uppercase">{{ p.qty }} {{ p.unit }}</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    </transition>
-
+      </transition>
     </div>
     
     <button 
@@ -56,8 +55,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { db } from "../../database";
+import { onMounted, onBeforeUnmount } from 'vue';
+import { useRoute } from 'vue-router'; // Tambahkan ini
+import { useProductSearch } from '../../composables/useProductSearch';
 import { useCartStore } from '../../stores/cart';
 
 const props = defineProps<{
@@ -66,10 +66,17 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits(['update:modelValue']);
+
+const route = useRoute(); // Inisialisasi route
 const cart = useCartStore();
 
-const isFocused = ref(false);
-const suggestions = ref<any[]>([]);
+const { 
+  suggestions, 
+  isFocused, 
+  fetchSuggestions, 
+  highlightText, 
+  formatRupiah 
+} = useProductSearch();
 
 const handleInput = (e: Event) => {
   const val = (e.target as HTMLInputElement).value;
@@ -77,33 +84,9 @@ const handleInput = (e: Event) => {
   fetchSuggestions(val);
 };
 
-const fetchSuggestions = async (query: string) => {
-  if (!query || query.length < 1) {
-    suggestions.value = [];
-    return;
-  }
-
-  const search = query.toLowerCase().trim();
-  
-  // Ambil data dan sortir berdasarkan "Starts With" (Logika Pintar)
-  const allMatches = await db.table('products')
-    .filter(p => p.name.toLowerCase().includes(search))
-    .toArray();
-
-  suggestions.value = allMatches.sort((a, b) => {
-    const aName = a.name.toLowerCase();
-    const bName = b.name.toLowerCase();
-    const aStarts = aName.startsWith(search);
-    const bStarts = bName.startsWith(search);
-
-    if (aStarts && !bStarts) return -1;
-    if (!aStarts && bStarts) return 1;
-    return aName.localeCompare(bName);
-  }).slice(0, 8);
-};
-
 const selectProduct = (p: any) => {
-  emit('update:modelValue', ''); // Bersihkan input setelah pilih
+  cart.addToCart(p); 
+  emit('update:modelValue', ''); 
   isFocused.value = false;
   window.dispatchEvent(new CustomEvent('open-product-detail', { detail: p.id }));
 };
@@ -113,25 +96,18 @@ const clearSearch = () => {
   suggestions.value = [];
 };
 
-const highlightText = (text: string) => {
-  const query = props.modelValue.trim();
-  if (!query) return text;
-  const safeQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const regex = new RegExp(`(${safeQuery})`, 'gi');
-  return text.replace(regex, '<span class="text-blue-600 font-black">$1</span>');
-};
-
-const formatRupiah = (val: number) => {
-  return new Intl.NumberFormat('id-ID', { 
-    style: 'currency', currency: 'IDR', maximumFractionDigits: 0 
-  }).format(val || 0);
-};
-
-// Close popup saat klik di luar
-window.addEventListener('click', (e) => {
+const handleClickOutside = (e: MouseEvent) => {
   if (!(e.target as HTMLElement).closest('.relative')) {
     isFocused.value = false;
   }
+};
+
+onMounted(() => {
+  window.addEventListener('click', handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', handleClickOutside);
 });
 </script>
 
@@ -139,4 +115,12 @@ window.addEventListener('click', (e) => {
 .fade-enter-active, .fade-leave-active { transition: all 0.2s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
 .no-scrollbar::-webkit-scrollbar { display: none; }
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 </style>

@@ -1,17 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import PageView from '../views/PageView.vue'
 
-// Helper untuk generate path dari nama menu
-// Contoh: 'Layanan Digital' -> '/layanan-digital'
-const generatePath = (name: string) => {
-  if (name === 'Dashboard') return '/'
-  return '/' + name.toLowerCase().replace(/\s+/g, '-')
-}
-
 const routes = [
   // GRUP 1
   { path: '/', name: 'Dashboard', component: PageView, meta: { icon: 'ri-dashboard-3-line' } },
-  { path: '/penjualan', name: 'Penjualan', component: PageView, meta: { icon: 'ri-calculator-line' } },
+  { path: '/penjualan', name: 'Penjualan', component: PageView, meta: { icon: 'ri-calculator-line', showScanner: true } },
   { path: '/layanan-digital', name: 'Layanan Digital', component: PageView, meta: { icon: 'ri-smartphone-line' } },
 
   // GRUP 2
@@ -21,7 +14,7 @@ const routes = [
   { path: '/pengeluaran', name: 'Pengeluaran', component: PageView, meta: { icon: 'ri-shopping-basket-line' } },
 
   // GRUP 3
-  { path: '/daftar-produk', name: 'Daftar Produk', component: PageView, meta: { icon: 'ri-list-settings-line' } },
+  { path: '/daftar-produk', name: 'Daftar Produk', component: PageView, meta: { icon: 'ri-list-settings-line', showScanner: true } },
   { path: '/tambah-produk', name: 'Tambah Produk', component: PageView, meta: { icon: 'ri-add-box-line' } },
   { path: '/kategori-produk', name: 'Kategori Produk', component: PageView, meta: { icon: 'ri-price-tag-3-line' } },
   { path: '/harga-paket', name: 'Harga Paket', component: PageView, meta: { icon: 'ri-box-3-line' } },

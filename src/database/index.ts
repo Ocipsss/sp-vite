@@ -1,8 +1,11 @@
+// src/database/index.ts
 import Dexie, { type Table } from 'dexie';
+import { DEXIE_SCHEMA } from './schema';
 
 // --- INTERFACES (Definisi Data) ---
+// Kita tetap pertahankan di sini agar mudah di-import oleh komponen lain
 export interface Product {
-  id: string; // Kita pakai string untuk UID
+  id: string; 
   name: string;
   code: string;
   category: string;
@@ -34,6 +37,7 @@ export interface Transaction {
 
 // --- DATABASE CLASS ---
 export class SinarPagiDB extends Dexie {
+  // Definisi Table dengan Type Safety
   products!: Table<Product>;
   product_packages!: Table<ProductPackage>;
   categories!: Table<{ id?: number; name: string }>;
@@ -47,21 +51,13 @@ export class SinarPagiDB extends Dexie {
   constructor() {
     super('SinarPagiDB');
     
-    // Sesuaikan dengan Versi 19 dari database lama kamu
-    this.version(19).stores({
-      products: 'id, name, code, category',
-      product_packages: 'id, productId, name',
-      categories: '++id, name',
-      transactions: 'id, date, total, memberId',
-      members: 'id, name, phone',
-      expenses: 'id, date, category',
-      digital_transactions: 'id, date, type',
-      services: '++id, name',
-      settings: 'id, storeName'
-    });
+    // Menggunakan schema dari src/database/schema.ts
+    // Tetap menggunakan versi 19 sesuai struktur Anda
+    this.version(19).stores(DEXIE_SCHEMA);
   }
 }
 
+// Create Instance
 export const db = new SinarPagiDB();
 
 // --- HELPER: GENERATE UID (Anti-Tabrakan) ---

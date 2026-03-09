@@ -2,6 +2,7 @@
 import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
 import { fdb } from "./firebase";
 import { db } from "../database";
+import { DB_TABLES } from "../database/schema"; // Import daftar tabel pusat
 
 let isSyncing = false;
 
@@ -22,9 +23,8 @@ const syncToCloud = async (table: string, id: string | number, data: any) => {
 };
 
 export const setupSyncHooks = () => {
-  const allTables = ['products', 'product_packages', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions', 'services', 'settings'];
-
-  allTables.forEach((tableName) => {
+  // Menggunakan DB_TABLES dari schema.ts
+  DB_TABLES.forEach((tableName) => {
     const table = (db as any)[tableName];
     if (!table) return;
     
@@ -44,20 +44,18 @@ export const setupSyncHooks = () => {
 
 // --- 2. LOGIKA PULL: DARI CLOUD KE LOKAL ---
 export const startPullSync = () => {
-  const allTables = ['products', 'product_packages', 'categories', 'transactions', 'members', 'expenses', 'digital_transactions', 'services', 'settings'];
-
-  allTables.forEach(tableName => {
+  // Menggunakan DB_TABLES dari schema.ts
+  DB_TABLES.forEach(tableName => {
     const tableRef = ref(fdb, tableName);
     const table = (db as any)[tableName];
     if (!table) return;
 
-    // FUNGSI KRUSIAL: Memastikan data punya ID agar Dexie tidak error
     const prepareData = (snapshot: any) => {
       const val = snapshot.val();
       if (!val) return null;
       return {
         ...val,
-        id: val.id || snapshot.key // Pakai key Firebase jika 'id' kosong
+        id: val.id || snapshot.key 
       };
     };
 
@@ -67,7 +65,7 @@ export const startPullSync = () => {
         try {
           isSyncing = true; 
           await table.put(data); 
-          console.log(`[SYNC] Syncing ${tableName}: ${data.name || data.id}`);
+          console.log(`[SYNC] Pulling ${tableName}: ${data.name || data.id}`);
         } catch (err) {
           console.error(`[SYNC ERROR] Gagal simpan ${tableName}:`, err);
         } finally {
@@ -88,9 +86,8 @@ export const startPullSync = () => {
     onChildRemoved(tableRef, async (snapshot) => {
       const id = snapshot.key;
       if (id) {
-        const targetId = isNaN(Number(id)) ? id : id; // Tetap pakai string jika itu UID
         isSyncing = true; 
-        await table.delete(targetId); 
+        await table.delete(id); 
         isSyncing = false;
       }
     });
