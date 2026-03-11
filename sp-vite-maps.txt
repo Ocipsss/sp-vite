@@ -1,0 +1,62 @@
+📂 src/api/ (Jalur Langit/Cloud)
+firebase.ts: Konfigurasi utama Firebase (API Key, Auth, Firestore). Ini adalah pintu gerbang aplikasi kamu ke Google Cloud.
+
+sync.ts: Logika untuk menarik (pull) dan mengirim (push) data antara database lokal (Dexie) dan database awan (Firestore).
+
+📂 src/common/ (Blok Bangunan)
+BaseButton.vue: Komponen tombol tunggal yang digunakan di seluruh aplikasi. Tujuannya agar semua tombol punya animasi dan tampilan yang seragam tanpa perlu menulis ulang class Tailwind berkali-kali.
+
+📂 src/components/ (Suku Cadang UI)
+layout/: Berisi kerangka aplikasi.
+
+MainLayout.vue: Induk dari segala tampilan. Mengatur Sidebar, Header, dan tempat di mana modal scanner muncul.
+
+GlobalSearch.vue: Komponen khusus kotak pencarian yang ada di bagian atas aplikasi.
+
+pages/: Potongan-potongan konten yang akan berganti di dalam MainLayout.
+
+Penjualan.vue: Mesin kasir utama (keranjang, input bayar, dll).
+
+DaftarProduk.vue: Katalog barang (lihat detail, edit stok, hapus produk).
+
+KategoriProduk.vue: Manajemen pengelompokan barang (Snack, Minyak, dsb).
+
+📂 src/composables/ (Logika Pintar)
+Kumpulan fungsi "otak" yang bisa dipakai berulang kali tanpa harus menulis ulang kodenya di setiap halaman.
+
+useAutoScroll.ts: Menangani agar daftar belanja otomatis bergeser ke bawah saat item baru masuk.
+
+useScanner.ts: Mengontrol kamera HP kamu untuk membaca barcode.
+
+useProductSearch.ts: Logika pencarian barang agar lebih cepat dan efisien.
+
+📂 src/constants/ (Aturan Tetap)
+app.ts: Berisi variabel yang nilainya tidak berubah, seperti daftar metode pembayaran ("Tunai", "QRIS") atau daftar menu navigasi.
+
+📂 src/database/ (Gudang Lokal)
+index.ts: Inisialisasi database Dexie.js. Ini adalah database di dalam browser agar aplikasi tetap bisa berjalan meski tanpa internet (offline-first).
+
+schema.ts: Denah gudang data. Menentukan tabel apa saja yang ada (produk, kategori, transaksi) dan apa kunci utamanya.
+
+📂 src/stores/ (Memori Jangka Pendek)
+cart.ts: Menggunakan Pinia. Mengelola data "sementara" yang sedang aktif, seperti barang apa saja yang ada di keranjang kasir saat ini.
+
+📂 src/types/ (Kamus TypeScript)
+index.ts: Definisi "kontrak" data. Misalnya, sebuah Product harus punya nama (string) dan harga (number). Ini yang mencegah kita salah ketik atau salah memasukkan data.
+
+📂 src/utils/ (Peralatan Bantu)
+calculators.ts: Fungsi matematika (hitung total belanjaan, kembalian, diskon).
+
+formatters.ts: Mengubah angka mentah menjadi cantik (misal: 5000 jadi Rp 5.000).
+
+📂 src/router/ & src/views/ (Sistem Navigasi)
+router/index.ts: Polisi lalu lintas yang menentukan: "Kalau user klik menu A, tampilkan Komponen A".
+
+PageView.vue: Wadah utama yang dipanggil router untuk menampilkan halaman-halaman yang ada di components/pages/.
+
+📄 File Utama di Luar
+App.vue: Akar dari seluruh aplikasi. Biasanya hanya berisi <router-view />.
+
+main.ts: Titik start pertama saat aplikasi dinyalakan. Di sini kita mendaftarkan Pinia, Router, dan file CSS.
+
+style.css: Tempat kita menyuntikkan Tailwind CSS dan font khusus.

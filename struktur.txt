@@ -1,42 +1,73 @@
-.
-├── README.md
-├── index.html
-├── package-lock.json
-├── package.json
-├── postcss.config.js
-├── public
-│   ├── manifest.webmanifest
-│   └── vite.svg
-├── src
-│   ├── App.vue
-│   ├── api
-│   │   ├── firebase.ts
-│   │   └── sync.ts
-│   ├── assets
-│   │   └── vue.svg
-│   ├── components
-│   │   ├── HelloWorld.vue
-│   │   ├── layout
-│   │   │   └── MainLayout.vue
-│   │   └── pages
-│   │       └── Penjualan.vue
-│   ├── database
-│   │   └── index.ts
-│   ├── main.ts
-│   ├── router
-│   │   └── index.ts
-│   ├── stores
-│   │   └── cart.ts
-│   ├── style.css
-│   ├── types
-│   │   └── index.ts
-│   └── views
-│       └── PageView.vue
-├── struktur.txt
-├── tailwind.config.ts
-├── tsconfig.app.json
-├── tsconfig.json
-├── tsconfig.node.json
-└── vite.config.ts
-
-13 directories, 27 files
+sp-vite/
+┣ dist/
+┃ ┣ assets/
+┃ ┃ ┣ index-B4zWuTrw.css
+┃ ┃ ┣ index-Cm1Y-Vp0.js
+┃ ┃ ┣ remixicon-B25hvfAs.eot
+┃ ┃ ┣ remixicon-BTtOSOPh.svg
+┃ ┃ ┣ remixicon-CZw4FkzQ.woff2
+┃ ┃ ┣ remixicon-S6an_USy.woff
+┃ ┃ ┗ remixicon-sqouR8Ox.ttf
+┃ ┣ icons/
+┃ ┣ index.html
+┃ ┣ manifest.webmanifest
+┃ ┗ vite.svg
+┣ public/
+┃ ┣ icons/
+┃ ┣ manifest.webmanifest
+┃ ┗ vite.svg
+┣ src/
+┃ ┣ api/
+┃ ┃ ┣ firebase.ts
+┃ ┃ ┗ sync.ts
+┃ ┣ assets/
+┃ ┃ ┗ vue.svg
+┃ ┣ common/
+┃ ┃ ┗ BaseButton.vue
+┃ ┣ components/
+┃ ┃ ┣ layout/
+┃ ┃ ┃ ┣ GlobalSearch.vue
+┃ ┃ ┃ ┗ MainLayout.vue
+┃ ┃ ┣ pages/
+┃ ┃ ┃ ┣ DaftarProduk.vue
+┃ ┃ ┃ ┣ KategoriProduk.vue
+┃ ┃ ┃ ┗ Penjualan.vue
+┃ ┃ ┗ HelloWorld.vue
+┃ ┣ composables/
+┃ ┃ ┣ useAutoScroll.ts
+┃ ┃ ┣ useProductSearch.ts
+┃ ┃ ┗ useScanner.ts
+┃ ┣ constants/
+┃ ┃ ┗ app.ts
+┃ ┣ database/
+┃ ┃ ┣ index.ts
+┃ ┃ ┗ schema.ts
+┃ ┣ router/
+┃ ┃ ┗ index.ts
+┃ ┣ stores/
+┃ ┃ ┗ cart.ts
+┃ ┣ types/
+┃ ┃ ┗ index.ts
+┃ ┣ utils/
+┃ ┃ ┣ calculators.ts
+┃ ┃ ┗ formatters.ts
+┃ ┣ views/
+┃ ┃ ┗ PageView.vue
+┃ ┣ App.vue
+┃ ┣ main.ts
+┃ ┗ style.css
+┣ .env
+┣ .env.example
+┣ index.html
+┣ package-lock.json
+┣ package.json
+┣ postcss.config.js
+┣ README.md
+┣ sp-vite-maps.txt
+┣ struktur.txt
+┣ tailwind.config.ts
+┣ text.txt
+┣ tsconfig.app.json
+┣ tsconfig.json
+┣ tsconfig.node.json
+┗ vite.config.ts

@@ -33,9 +33,9 @@ import { computed, markRaw } from 'vue';
 import { useRoute } from 'vue-router';
 
 // IMPORT HALAMAN YANG SUDAH MIGRASI
-import Penjualan from '../components/pages/Penjualan.vue';
-import DaftarProduk from '../components/pages/DaftarProduk.vue'; 
-import KategoriProduk from '../components/pages/KategoriProduk.vue'; // Baru ditambahkan
+import Penjualan from '../components/pages/penjualan/Penjualan.vue';
+import DaftarProduk from '../components/pages/daftar-produk/DaftarProduk.vue'; 
+import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue'; // Baru ditambahkan
 
 const route = useRoute();
 

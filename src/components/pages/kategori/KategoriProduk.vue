@@ -13,14 +13,15 @@
           @keyup.enter="addCategory"
           type="text" 
           class="flex-1 bg-slate-50 border border-slate-100 px-4 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all text-sm font-bold text-slate-700" 
-          placeholder="Snack, Minyak, Kurma...">
-        
-        <button 
-          @click="addCategory" 
-          class="bg-blue-600 text-white px-5 rounded-xl flex items-center justify-center active:scale-90 shadow-lg shadow-blue-100 transition-all"
+          placeholder="Snack, Minyak, Kurma..."
         >
-          <i class="ri-add-fill text-2xl"></i>
-        </button>
+        
+        <BaseButton 
+          variant="primary"
+          icon="ri-add-fill"
+          class="rounded-xl px-5"
+          @click="addCategory" 
+        />
       </div>
     </div>
 
@@ -68,14 +69,15 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { db } from "../../database";
+import { db } from "../../../database";
 import { useObservable } from "@vueuse/rxjs";
 import { liveQuery } from "dexie";
 import { Observable } from 'rxjs';
+import BaseButton from "../../../common/BaseButton.vue";
 
 const categoryName = ref('');
 
-// LiveQuery Dexie to Observable
+// LiveQuery Dexie to Observable (Auto-sync UI)
 const listCategories = useObservable(
   (liveQuery(() => db.categories.toArray()) as unknown) as Observable<any[]>
 );

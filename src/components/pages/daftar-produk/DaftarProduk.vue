@@ -1,125 +1,3 @@
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { db } from "../../database"; 
-import { useCartStore } from "../../stores/cart";
-import type { Product } from "../../types";
-
-const cart = useCartStore();
-const products = ref<Product[]>([]);
-const listCategories = ref<any[]>([]);
-
-// State Modal
-const isEditModalOpen = ref(false);
-const isDetailModalOpen = ref(false);
-const editingProduct = ref<Product | null>(null);
-const detailProduct = ref<Product | null>(null);
-
-// State untuk input format Rupiah di Modal
-const displayModal = ref("");
-const displaySell = ref("");
-
-const formatRupiah = (val: number) => {
-  return new Intl.NumberFormat('id-ID', { 
-    style: 'currency', currency: 'IDR', maximumFractionDigits: 0 
-  }).format(val || 0);
-};
-
-const formatRupiahDisplay = (val: number) => {
-  if (!val && val !== 0) return "";
-  return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-};
-
-// Filter Pencarian (Sinkron dengan Header)
-const filteredProducts = computed(() => {
-  const query = (cart.searchQuery || "").toLowerCase().trim();
-  if (!query) return products.value;
-  return products.value.filter(p => 
-    p.name.toLowerCase().includes(query) || 
-    (p.code && p.code.toLowerCase().includes(query))
-  );
-});
-
-const loadData = async () => {
-  try {
-    products.value = await db.table('products').orderBy('name').toArray();
-    listCategories.value = await db.table('categories').toArray();
-  } catch (err) {
-    console.error("Database Error:", err);
-  }
-};
-
-const openDetail = (p: Product) => {
-  detailProduct.value = p;
-  isDetailModalOpen.value = true;
-};
-
-const openEdit = (p: Product) => {
-  editingProduct.value = JSON.parse(JSON.stringify(p));
-  displayModal.value = formatRupiahDisplay(p.price_modal);
-  displaySell.value = formatRupiahDisplay(p.price_sell);
-  isDetailModalOpen.value = false;
-  isEditModalOpen.value = true;
-};
-
-const updateNumber = (field: 'price_modal' | 'price_sell', event: any) => {
-  let rawValue = event.target.value.replace(/\D/g, "");
-  let numValue = parseInt(rawValue) || 0;
-  if (editingProduct.value) {
-    editingProduct.value[field] = numValue;
-    if (field === 'price_modal') displayModal.value = formatRupiahDisplay(numValue);
-    if (field === 'price_sell') displaySell.value = formatRupiahDisplay(numValue);
-  }
-};
-
-const updateProduct = async () => {
-  if (!editingProduct.value) return;
-  try {
-    await db.table('products').put(JSON.parse(JSON.stringify(editingProduct.value)));
-    isEditModalOpen.value = false;
-    await loadData(); 
-    alert("Produk berhasil diperbarui");
-  } catch (err: any) {
-    alert("Gagal memperbarui: " + err.message);
-  }
-};
-
-const deleteProduct = async (id: any) => {
-  if (confirm("Hapus produk ini secara permanen?")) {
-    try {
-      await db.table('products').delete(id);
-      isDetailModalOpen.value = false;
-      await loadData();
-    } catch (err: any) {
-      alert("Gagal menghapus: " + err.message);
-    }
-  }
-};
-
-// --- LOGIKA EVENT LISTENER DARI FILE LAMA ---
-
-const handleScanEvent = (e: any) => {
-  if (isEditModalOpen.value && editingProduct.value) {
-    editingProduct.value.code = e.detail;
-  }
-};
-
-const handleOpenDetailEvent = (e: any) => {
-  const p = products.value.find(item => item.id === e.detail);
-  if (p) openDetail(p);
-};
-
-onMounted(() => {
-  loadData();
-  window.addEventListener('barcode-scanned-edit', handleScanEvent);
-  window.addEventListener('open-product-detail', handleOpenDetailEvent);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('barcode-scanned-edit', handleScanEvent);
-  window.removeEventListener('open-product-detail', handleOpenDetailEvent);
-});
-</script>
-
 <template>
   <div class="min-h-full bg-slate-50">
     <div class="flex flex-col gap-3 px-4 pt-4 pb-48">
@@ -182,8 +60,8 @@ onUnmounted(() => {
         </div>
 
         <div class="flex gap-3">
-          <button @click="deleteProduct(detailProduct.id)" class="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest">Hapus</button>
-          <button @click="openEdit(detailProduct)" class="flex-2 py-4 bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg">Edit Data</button>
+          <BaseButton variant="danger" block size="lg" label="HAPUS" @click="deleteProduct(detailProduct.id)" />
+          <BaseButton variant="primary" block size="lg" label="EDIT DATA" @click="openEdit(detailProduct)" />
         </div>
       </div>
     </div>
@@ -232,11 +110,122 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <button @click="updateProduct" class="w-full mt-8 py-4 bg-blue-600 text-white rounded-[20px] font-black uppercase text-[11px] tracking-[0.3em] shadow-lg active:scale-95 transition-all">Simpan Perubahan</button>
+        <BaseButton variant="primary" block size="lg" label="SIMPAN PERUBAHAN" class="mt-8" @click="updateProduct" />
       </div>
     </div>
   </div>
 </template>
+
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { db } from "../../../database"; 
+import { useCartStore } from "../../../stores/cart";
+import { formatRupiah, formatNumber } from "../../../utils/formatters";
+import BaseButton from "../../../common/BaseButton.vue";
+import type { Product } from "../../../types";
+
+const cart = useCartStore();
+const products = ref<Product[]>([]);
+const listCategories = ref<any[]>([]);
+
+// State Modal
+const isEditModalOpen = ref(false);
+const isDetailModalOpen = ref(false);
+const editingProduct = ref<Product | null>(null);
+const detailProduct = ref<Product | null>(null);
+
+// State untuk input format Rupiah di Modal
+const displayModal = ref("");
+const displaySell = ref("");
+
+// Filter Pencarian (Sinkron dengan Header)
+const filteredProducts = computed(() => {
+  const query = (cart.searchQuery || "").toLowerCase().trim();
+  if (!query) return products.value;
+  return products.value.filter(p => 
+    p.name.toLowerCase().includes(query) || 
+    (p.code && p.code.toLowerCase().includes(query))
+  );
+});
+
+const loadData = async () => {
+  try {
+    products.value = await db.table('products').orderBy('name').toArray();
+    listCategories.value = await db.table('categories').toArray();
+  } catch (err) {
+    console.error("Database Error:", err);
+  }
+};
+
+const openDetail = (p: Product) => {
+  detailProduct.value = p;
+  isDetailModalOpen.value = true;
+};
+
+const openEdit = (p: Product) => {
+  editingProduct.value = JSON.parse(JSON.stringify(p));
+  displayModal.value = formatNumber(p.price_modal);
+  displaySell.value = formatNumber(p.price_sell);
+  isDetailModalOpen.value = false;
+  isEditModalOpen.value = true;
+};
+
+const updateNumber = (field: 'price_modal' | 'price_sell', event: any) => {
+  let rawValue = event.target.value.replace(/\D/g, "");
+  let numValue = parseInt(rawValue) || 0;
+  if (editingProduct.value) {
+    editingProduct.value[field] = numValue;
+    if (field === 'price_modal') displayModal.value = formatNumber(numValue);
+    if (field === 'price_sell') displaySell.value = formatNumber(numValue);
+  }
+};
+
+const updateProduct = async () => {
+  if (!editingProduct.value) return;
+  try {
+    await db.table('products').put(JSON.parse(JSON.stringify(editingProduct.value)));
+    isEditModalOpen.value = false;
+    await loadData(); 
+  } catch (err: any) {
+    console.error("Gagal memperbarui: ", err);
+  }
+};
+
+const deleteProduct = async (id: any) => {
+  if (confirm("Hapus produk ini secara permanen?")) {
+    try {
+      await db.table('products').delete(id);
+      isDetailModalOpen.value = false;
+      await loadData();
+    } catch (err: any) {
+      console.error("Gagal menghapus: ", err);
+    }
+  }
+};
+
+// Event Listeners (Barcode & Detail External)
+const handleScanEvent = (e: any) => {
+  if (isEditModalOpen.value && editingProduct.value) {
+    editingProduct.value.code = e.detail;
+  }
+};
+
+const handleOpenDetailEvent = (e: any) => {
+  const p = products.value.find(item => item.id === e.detail);
+  if (p) openDetail(p);
+};
+
+onMounted(() => {
+  loadData();
+  window.addEventListener('barcode-scanned-edit', handleScanEvent);
+  window.addEventListener('open-product-detail', handleOpenDetailEvent);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('barcode-scanned-edit', handleScanEvent);
+  window.removeEventListener('open-product-detail', handleOpenDetailEvent);
+});
+</script>
 
 <style scoped>
 .animate-slide-up {
