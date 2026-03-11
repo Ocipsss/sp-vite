@@ -1,8 +1,8 @@
 sp-vite/
 ┣ dist/
 ┃ ┣ assets/
-┃ ┃ ┣ index-B4zWuTrw.css
-┃ ┃ ┣ index-Cm1Y-Vp0.js
+┃ ┃ ┣ index-C9AhRIqX.js
+┃ ┃ ┣ index-Ccg34nkJ.css
 ┃ ┃ ┣ remixicon-B25hvfAs.eot
 ┃ ┃ ┣ remixicon-BTtOSOPh.svg
 ┃ ┃ ┣ remixicon-CZw4FkzQ.woff2
@@ -27,18 +27,26 @@ sp-vite/
 ┃ ┣ components/
 ┃ ┃ ┣ layout/
 ┃ ┃ ┃ ┣ GlobalSearch.vue
-┃ ┃ ┃ ┗ MainLayout.vue
-┃ ┃ ┣ pages/
-┃ ┃ ┃ ┣ DaftarProduk.vue
-┃ ┃ ┃ ┣ KategoriProduk.vue
-┃ ┃ ┃ ┗ Penjualan.vue
-┃ ┃ ┗ HelloWorld.vue
+┃ ┃ ┃ ┣ MainLayout.vue
+┃ ┃ ┃ ┗ Sidebar.vue
+┃ ┃ ┗ pages/
+┃ ┃   ┣ daftar-produk/
+┃ ┃ ┃ ┃ ┗ DaftarProduk.vue
+┃ ┃   ┣ kategori/
+┃ ┃ ┃ ┃ ┗ KategoriProduk.vue
+┃ ┃   ┗ penjualan/
+┃ ┃ ┃   ┣ CartHeader.vue
+┃ ┃ ┃   ┣ CartItem.vue
+┃ ┃ ┃   ┣ CartList.vue
+┃ ┃ ┃   ┣ PaymentPanel.vue
+┃ ┃ ┃   ┗ Penjualan.vue
 ┃ ┣ composables/
 ┃ ┃ ┣ useAutoScroll.ts
 ┃ ┃ ┣ useProductSearch.ts
 ┃ ┃ ┗ useScanner.ts
 ┃ ┣ constants/
-┃ ┃ ┗ app.ts
+┃ ┃ ┣ app.ts
+┃ ┃ ┗ menu.ts
 ┃ ┣ database/
 ┃ ┃ ┣ index.ts
 ┃ ┃ ┗ schema.ts
