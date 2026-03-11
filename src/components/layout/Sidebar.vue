@@ -1,5 +1,5 @@
 <template>
-  <aside class="w-[70%] h-full p-6 text-white flex flex-col overflow-y-auto no-scrollbar">
+  <aside class="fixed inset-y-0 left-0 w-[70%] h-full p-6 text-white flex flex-col overflow-y-auto no-scrollbar z-0 bg-[#0f172a]">
     <div class="mb-8 shrink-0">
       <h1 class="text-[1.8rem] font-black text-[#fbbf24] tracking-tighter uppercase italic leading-none shadow-[#fbbf24]/40 drop-shadow-[0_0_15px]">
         SINAR PAGI
@@ -50,7 +50,7 @@ import { useRoute } from 'vue-router';
 import { MENU_GROUPS } from '../../constants/menu';
 
 defineProps<{ isPulling: boolean }>();
-const emit = defineEmits(['navigate', 'sync']);
+defineEmits(['navigate', 'sync']);
 
 const route = useRoute();
 const activePage = computed(() => route.name as string);

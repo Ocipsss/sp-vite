@@ -1,8 +1,8 @@
 sp-vite/
 ┣ dist/
 ┃ ┣ assets/
-┃ ┃ ┣ index-C9AhRIqX.js
-┃ ┃ ┣ index-Ccg34nkJ.css
+┃ ┃ ┣ index-DV_v8DsU.css
+┃ ┃ ┣ index-pmgB7m5q.js
 ┃ ┃ ┣ remixicon-B25hvfAs.eot
 ┃ ┃ ┣ remixicon-BTtOSOPh.svg
 ┃ ┃ ┣ remixicon-CZw4FkzQ.woff2
@@ -31,7 +31,10 @@ sp-vite/
 ┃ ┃ ┃ ┗ Sidebar.vue
 ┃ ┃ ┗ pages/
 ┃ ┃   ┣ daftar-produk/
-┃ ┃ ┃ ┃ ┗ DaftarProduk.vue
+┃ ┃ ┃ ┃ ┣ DaftarProduk.vue
+┃ ┃ ┃ ┃ ┣ ProductDetailModal.vue
+┃ ┃ ┃ ┃ ┣ ProductEditModal.vue
+┃ ┃ ┃ ┃ ┗ ProductItem.vue
 ┃ ┃   ┣ kategori/
 ┃ ┃ ┃ ┃ ┗ KategoriProduk.vue
 ┃ ┃   ┗ penjualan/
