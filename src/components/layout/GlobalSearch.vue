@@ -46,13 +46,6 @@
         </div>
       </transition>
     </div>
-    
-    <button 
-      @click="cart.toggleScanner(true)"
-      class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-blue-200 shrink-0"
-    >
-      <i class="ri-qr-scan-2-line text-xl"></i>
-    </button>
   </div>
 </template>
 
