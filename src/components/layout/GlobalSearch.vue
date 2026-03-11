@@ -1,5 +1,5 @@
 <template>
-  <div v-if="route.meta.showScanner" class="flex gap-2 w-full px-1 animate-fade-in">
+  <div class="flex gap-2 w-full px-1 animate-fade-in">
     
     <div class="relative flex-1 group search-container">
       <input 
@@ -51,7 +51,6 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRoute } from 'vue-router';
 import { useProductSearch } from '../../composables/useProductSearch';
 import { useCartStore } from '../../stores/cart';
 
@@ -62,7 +61,6 @@ const props = defineProps<{
 
 const emit = defineEmits(['update:modelValue']);
 
-const route = useRoute();
 const cart = useCartStore();
 
 const { 
@@ -73,7 +71,6 @@ const {
   formatRupiah 
 } = useProductSearch();
 
-// Computed property untuk kejelasan logika dropdown
 const showDropdown = computed(() => {
   return isFocused.value && suggestions.value.length > 0 && props.modelValue.length > 0;
 });
@@ -92,10 +89,10 @@ const selectProduct = (p: any) => {
 
 const clearSearch = () => {
   emit('update:modelValue', '');
-  suggestions.value = [];
+  // @ts-ignore
+  if (suggestions.value) suggestions.value = [];
 };
 
-// Refactor: Logic click outside yang lebih spesifik
 const handleClickOutside = (e: MouseEvent) => {
   const container = (e.target as HTMLElement).closest('.search-container');
   if (!container) {
@@ -112,6 +109,7 @@ onBeforeUnmount(() => window.removeEventListener('mousedown', handleClickOutside
 .fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px) scale(0.98); }
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 .animate-fade-in { animation: fadeIn 0.4s ease-out; }
 
 @keyframes fadeIn {

@@ -9,7 +9,17 @@
     </button>
 
     <div class="flex-1">
-      <GlobalSearch v-model="cart.searchQuery" placeholder="Cari barang..." />
+      <GlobalSearch 
+        v-if="!isNotOnMainPages"
+        v-model="cart.searchQuery" 
+        placeholder="Cari barang..." 
+      />
+      
+      <div v-else class="px-2">
+        <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest italic">
+          {{ route.name }}
+        </h2>
+      </div>
     </div>
 
     <div class="flex items-center">
@@ -53,10 +63,9 @@ const cart = useCartStore();
 const route = useRoute();
 const router = useRouter();
 
-// Logika penentuan halaman
+// Logika penentuan halaman: TRUE jika BUKAN di Penjualan/Daftar Produk
 const isNotOnMainPages = computed(() => {
   const currentName = route.name as string;
-  // Icon Cart muncul jika nama route BUKAN salah satu di bawah ini
   const mainPages = ['Penjualan', 'Daftar Produk'];
   return !mainPages.includes(currentName);
 });
