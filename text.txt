@@ -1,0 +1,1796 @@
+index.html:
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>sp-vite</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
+<script>eruda.init();</script>
+
+  </body>
+</html>
+
+
+
+src/App.vue:
+<script setup lang="ts">
+import MainLayout from './components/layout/MainLayout.vue'
+import 'remixicon/fonts/remixicon.css'
+</script>
+
+<template>
+  <MainLayout>
+    <router-view />
+  </MainLayout>
+</template>
+
+
+
+src/api/firebase.ts:
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth"; // Tambahkan ini
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+const app = initializeApp(firebaseConfig);
+export const fdb = getDatabase(app);
+export const auth = getAuth(app); // Ekspor Auth agar bisa dipakai di tempat lain
+
+
+
+src/api/sync.ts:
+// src/api/sync.ts
+import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
+import { fdb } from "./firebase";
+import { db } from "../database";
+import { DB_TABLES } from "../database/schema"; // Import daftar tabel pusat
+
+let isSyncing = false;
+
+// --- 1. LOGIKA PUSH: DARI LOKAL KE CLOUD ---
+const syncToCloud = async (table: string, id: string | number, data: any) => {
+  if (isSyncing) return;
+  try {
+    const itemRef = ref(fdb, `${table}/${id}`);
+    if (data === null) {
+      await remove(itemRef);
+    } else {
+      const cleanData = JSON.parse(JSON.stringify(data));
+      await set(itemRef, cleanData);
+    }
+  } catch (e) {
+    console.warn(`Sync Cloud Gagal [${table}]:`, e);
+  }
+};
+
+export const setupSyncHooks = () => {
+  // Menggunakan DB_TABLES dari schema.ts
+  DB_TABLES.forEach((tableName) => {
+    const table = (db as any)[tableName];
+    if (!table) return;
+    
+    table.hook('creating', (pk: any, obj: any) => {
+      syncToCloud(tableName, pk || obj.id, obj);
+    });
+
+    table.hook('updating', (mods: any, pk: any, obj: any) => {
+      syncToCloud(tableName, pk, { ...obj, ...mods });
+    });
+
+    table.hook('deleting', (pk: any) => {
+      syncToCloud(tableName, pk, null);
+    });
+  });
+};
+
+// --- 2. LOGIKA PULL: DARI CLOUD KE LOKAL ---
+export const startPullSync = () => {
+  // Menggunakan DB_TABLES dari schema.ts
+  DB_TABLES.forEach(tableName => {
+    const tableRef = ref(fdb, tableName);
+    const table = (db as any)[tableName];
+    if (!table) return;
+
+    const prepareData = (snapshot: any) => {
+      const val = snapshot.val();
+      if (!val) return null;
+      return {
+        ...val,
+        id: val.id || snapshot.key 
+      };
+    };
+
+    onChildAdded(tableRef, async (snapshot) => {
+      const data = prepareData(snapshot);
+      if (data) {
+        try {
+          isSyncing = true; 
+          await table.put(data); 
+          console.log(`[SYNC] Pulling ${tableName}: ${data.name || data.id}`);
+        } catch (err) {
+          console.error(`[SYNC ERROR] Gagal simpan ${tableName}:`, err);
+        } finally {
+          isSyncing = false;
+        }
+      }
+    });
+
+    onChildChanged(tableRef, async (snapshot) => {
+      const data = prepareData(snapshot);
+      if (data) {
+        isSyncing = true; 
+        await table.put(data); 
+        isSyncing = false;
+      }
+    });
+
+    onChildRemoved(tableRef, async (snapshot) => {
+      const id = snapshot.key;
+      if (id) {
+        isSyncing = true; 
+        await table.delete(id); 
+        isSyncing = false;
+      }
+    });
+  });
+};
+
+
+
+src/components/layout/GlobalSearch.vue:
+<template>
+  <div v-if="route.meta.showScanner" class="flex gap-2 w-full px-1 animate-fade-in">
+    <div class="relative flex-1 group">
+      <input 
+        :value="modelValue" 
+        @input="handleInput"
+        @focus="isFocused = true"
+        type="text" 
+        :placeholder="placeholder" 
+        class="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-500/10 outline-none text-sm z-20"
+      >
+      
+      <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center z-30">
+        <i v-if="!modelValue" class="ri-search-2-line text-slate-400 group-focus-within:text-blue-500"></i>
+        <button v-else @click="clearSearch" class="w-6 h-6 bg-slate-100 rounded-full flex items-center justify-center active:scale-90 transition-transform">
+          <i class="ri-close-line text-slate-500"></i>
+        </button>
+      </div>
+
+      <transition name="fade">
+        <div v-if="isFocused && suggestions.length > 0 && modelValue" 
+          class="absolute top-full right-0 mt-2 bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden z-999"
+          style="left: -1rem; width: calc(100% + 2rem);" 
+        >
+          <div class="max-h-80 overflow-y-auto no-scrollbar">
+            <div 
+              v-for="p in suggestions" :key="p.id"
+              @click="selectProduct(p)"
+              class="px-6 py-4 hover:bg-slate-50 border-b border-slate-50 flex items-center gap-4 active:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <div class="w-8 h-8 bg-slate-50 rounded-full flex items-center justify-center shrink-0">
+                <i class="ri-search-line text-slate-300 text-xs"></i>
+              </div>
+              <div class="flex-1 min-w-0 text-left">
+                <div class="text-[13px] font-black text-slate-700 uppercase truncate" v-html="highlightText(p.name, modelValue)"></div>
+                <div class="text-[9px] text-slate-400 font-bold tracking-wider uppercase">{{ p.code || 'Tanpa Kode' }}</div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="text-[11px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</div>
+                <div class="text-[9px] font-bold text-slate-300 uppercase">{{ p.qty }} {{ p.unit }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+    
+    <button 
+      @click="cart.toggleScanner(true)"
+      class="w-12 h-12 bg-blue-50 text-blue-600 border-none rounded-xl flex items-center justify-center active:bg-blue-100 transition-all shadow-sm shrink-0"
+    >
+      <i class="ri-qr-scan-2-line text-xl"></i>
+    </button>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount } from 'vue';
+import { useRoute } from 'vue-router'; // Tambahkan ini
+import { useProductSearch } from '../../composables/useProductSearch';
+import { useCartStore } from '../../stores/cart';
+
+const props = defineProps<{
+  modelValue: string;
+  placeholder?: string;
+}>();
+
+const emit = defineEmits(['update:modelValue']);
+
+const route = useRoute(); // Inisialisasi route
+const cart = useCartStore();
+
+const { 
+  suggestions, 
+  isFocused, 
+  fetchSuggestions, 
+  highlightText, 
+  formatRupiah 
+} = useProductSearch();
+
+const handleInput = (e: Event) => {
+  const val = (e.target as HTMLInputElement).value;
+  emit('update:modelValue', val);
+  fetchSuggestions(val);
+};
+
+const selectProduct = (p: any) => {
+  cart.addToCart(p); 
+  emit('update:modelValue', ''); 
+  isFocused.value = false;
+  window.dispatchEvent(new CustomEvent('open-product-detail', { detail: p.id }));
+};
+
+const clearSearch = () => {
+  emit('update:modelValue', '');
+  suggestions.value = [];
+};
+
+const handleClickOutside = (e: MouseEvent) => {
+  if (!(e.target as HTMLElement).closest('.relative')) {
+    isFocused.value = false;
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('click', handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('click', handleClickOutside);
+});
+</script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: all 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+
+
+src/components/layout/MainLayout.vue:
+<template>
+  <div class="fixed inset-0 bg-[#0f172a] overflow-hidden">
+    <aside class="w-[70%] h-full p-6 text-white flex flex-col overflow-y-auto no-scrollbar">
+      <div class="mb-8 shrink-0">
+        <h1 class="text-[1.8rem] font-black text-[#fbbf24] tracking-tighter uppercase italic leading-none shadow-[#fbbf24]/40 drop-shadow-[0_0_15px]">
+          SINAR PAGI
+        </h1>
+        <p class="text-[10px] text-slate-500 font-bold tracking-[0.2em] mt-2 italic">POINT OF SALE v1.0</p>
+      </div>
+
+      <nav class="flex-1 space-y-6">
+        <div v-for="(group, gIndex) in menuGroups" :key="gIndex" class="space-y-1">
+          <div 
+            v-for="item in group.items" :key="item.name"
+            @click="navigateTo(item.name)" 
+            :class="menuClass(item.name)"
+          >
+            <i :class="item.icon" class="text-xl"></i>
+            <span class="font-medium text-[15px] whitespace-nowrap">{{ item.name }}</span>
+          </div>
+          <div v-if="gIndex < menuGroups.length - 1" class="pt-4 pb-2">
+            <div class="h-px bg-white/5 w-full"></div>
+          </div>
+        </div>
+      </nav>
+
+      <div class="mt-auto pt-6 border-t border-white/5">
+        <button 
+          @click="handlePullFirebase" 
+          :disabled="isPulling"
+          class="w-full flex items-center gap-4 px-5 py-4 rounded-4xl transition-all active:scale-95 border border-white/5"
+          :class="isPulling ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'"
+        >
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20">
+            <i class="ri-cloud-download-line text-xl" :class="{'animate-bounce': isPulling}"></i>
+          </div>
+          <div class="text-left">
+            <span class="block text-[10px] font-black uppercase tracking-widest leading-none mb-1">
+              {{ isPulling ? 'Proses...' : 'Update Data' }}
+            </span>
+            <span class="block text-[8px] font-bold opacity-60 uppercase tracking-tighter italic">Sinkron Cloud</span>
+          </div>
+        </button>
+      </div>
+    </aside>
+
+    <div 
+      :class="[
+        'fixed inset-0 bg-[#f1f5f9] transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.185)] z-10 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex flex-col',
+        isSidebarOpen ? 'translate-x-[70%] scale-[0.95] rounded-[40px] cursor-pointer overflow-hidden select-none' : 'translate-x-0 scale-100 rounded-none overflow-hidden'
+      ]"
+      @click="isSidebarOpen ? isSidebarOpen = false : null"
+    >
+      <header class="h-16 bg-white border-b border-slate-200 flex items-center gap-3 px-4 shrink-0">
+        <button 
+          @click.stop="isSidebarOpen = !isSidebarOpen"
+          class="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl transition-all border border-slate-100"
+        >
+          <i :class="isSidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'" class="text-2xl"></i>
+        </button>
+
+        <div class="flex-1">
+          <GlobalSearch v-model="cart.searchQuery" placeholder="Cari barang..." />
+        </div>
+      </header>
+
+      <main class="flex-1 overflow-y-auto bg-[#f1f5f9] relative h-full min-h-0">
+  <slot />
+  <div v-if="isSidebarOpen" class="absolute inset-0 z-50 bg-transparent"></div>
+</main>
+
+    </div>
+
+    <div v-if="cart.isScannerOpen" class="fixed inset-0 z-100 bg-white flex flex-col p-6 animate-zoom-in">
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex flex-col">
+                <span class="text-xs font-black uppercase tracking-widest text-blue-600">Scanner Aktif</span>
+                <span class="text-[10px] text-gray-400 font-bold uppercase">Arahkan ke Barcode Produk</span>
+            </div>
+            <button @click="cart.toggleScanner(false)" class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                <i class="ri-close-line text-xl"></i>
+            </button>
+        </div>
+        <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 bg-slate-50 aspect-square shadow-inner"></div>
+        <div class="mt-auto py-8 text-center">
+            <span class="text-[9px] text-gray-400 font-black tracking-[0.3em] uppercase">Sinar Pagi POS System</span>
+        </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
+import { useCartStore } from '../../stores/cart';
+import GlobalSearch from './GlobalSearch.vue';
+import { db } from '../../database';
+import { startPullSync } from '../../api/sync';
+// Import Composable Baru
+import { useScanner } from '../../composables/useScanner';
+
+const cart = useCartStore();
+const isSidebarOpen = ref(false);
+const isPulling = ref(false);
+const router = useRouter();
+const route = useRoute();
+
+// Gunakan composable scanner
+const { startScanner, stopScanner } = useScanner();
+
+const activePage = computed(() => route.name as string);
+
+const navigateTo = (name: string) => {
+  router.push({ name });
+  isSidebarOpen.value = false; 
+};
+
+const handlePullFirebase = async () => {
+  isPulling.value = true;
+  try {
+    startPullSync();
+    setTimeout(() => {
+      isPulling.value = false;
+      alert("✅ Sinkronisasi Cloud Aktif.");
+      window.location.reload(); 
+    }, 3000);
+  } catch (err) {
+    alert("Gagal koneksi cloud");
+    isPulling.value = false;
+  }
+};
+
+// Logika ketika scan berhasil
+const onScanSuccess = async (decodedText: string) => {
+  await stopScanner();
+  cart.toggleScanner(false);
+  
+  const product = await db.table('products').where('code').equals(decodedText).first();
+  if (product) {
+    cart.addToCart(product);
+    if (navigator.vibrate) navigator.vibrate(100);
+  } else {
+    alert(`Barcode ${decodedText} tidak terdaftar.`);
+  }
+};
+
+// Watcher untuk reaktifitas modal scanner
+watch(() => cart.isScannerOpen, (isOpen) => {
+  if (isOpen) {
+    // Delay 300ms agar elemen "reader" muncul di DOM sebelum di-init
+    setTimeout(() => {
+      startScanner("reader", onScanSuccess).catch(() => {
+        cart.toggleScanner(false);
+      });
+    }, 300);
+  } else {
+    stopScanner();
+  }
+});
+
+// Pembersihan otomatis saat pindah halaman/komponen dihancurkan
+onBeforeUnmount(() => stopScanner());
+
+// --- DATA MENU & STYLING ---
+const menuGroups = [
+  { items: [
+    { name: 'Dashboard', icon: 'ri-dashboard-3-line' },
+    { name: 'Penjualan', icon: 'ri-calculator-line' },
+    { name: 'Layanan Digital', icon: 'ri-smartphone-line' }
+  ]},
+  { items: [
+    { name: 'Riwayat Transaksi', icon: 'ri-history-line' },
+    { name: 'Stock Monitor', icon: 'ri-radar-line' },
+    { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' },
+    { name: 'Pengeluaran', icon: 'ri-shopping-basket-line' } 
+  ]},
+  { items: [
+    { name: 'Daftar Produk', icon: 'ri-list-settings-line' },
+    { name: 'Tambah Produk', icon: 'ri-add-box-line' },
+    { name: 'Kategori Produk', icon: 'ri-price-tag-3-line' },
+    { name: 'Harga Paket', icon: 'ri-box-3-line' },
+    { name: 'Data Jasa', icon: 'ri-customer-service-2-line' },
+    { name: 'Data Member', icon: 'ri-user-heart-line' },
+    { name: 'Data Kasir', icon: 'ri-user-star-line' }
+  ]},
+  { items: [
+    { name: 'Laporan Harian', icon: 'ri-calendar-event-line' },
+    { name: 'Laba Rugi', icon: 'ri-funds-line' },
+    { name: 'Arus Uang', icon: 'ri-exchange-funds-line' },
+    { name: 'Pengaturan', icon: 'ri-settings-5-line' }
+  ]}
+];
+
+const menuClass = (page: string) => [
+  'flex items-center gap-4 px-5 py-3 rounded-2xl cursor-pointer transition-all duration-200 group',
+  activePage.value === page 
+    ? 'text-[#fbbf24] bg-[#fbbf24]/10 shadow-[0_0_20px_rgba(251,191,36,0.1)] font-bold' 
+    : 'text-slate-400 hover:text-white hover:bg-white/5'
+];
+</script>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.animate-zoom-in { animation: zoomIn 0.2s ease-out; }
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+</style>
+
+
+
+src/components/pages/DaftarProduk.vue:
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { db } from "../../database"; 
+import { useCartStore } from "../../stores/cart";
+import type { Product } from "../../types";
+
+const cart = useCartStore();
+const products = ref<Product[]>([]);
+const listCategories = ref<any[]>([]);
+
+// State Modal
+const isEditModalOpen = ref(false);
+const isDetailModalOpen = ref(false);
+const editingProduct = ref<Product | null>(null);
+const detailProduct = ref<Product | null>(null);
+
+// State untuk input format Rupiah di Modal
+const displayModal = ref("");
+const displaySell = ref("");
+
+const formatRupiah = (val: number) => {
+  return new Intl.NumberFormat('id-ID', { 
+    style: 'currency', currency: 'IDR', maximumFractionDigits: 0 
+  }).format(val || 0);
+};
+
+const formatRupiahDisplay = (val: number) => {
+  if (!val && val !== 0) return "";
+  return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+// Filter Pencarian (Sinkron dengan Header)
+const filteredProducts = computed(() => {
+  const query = (cart.searchQuery || "").toLowerCase().trim();
+  if (!query) return products.value;
+  return products.value.filter(p => 
+    p.name.toLowerCase().includes(query) || 
+    (p.code && p.code.toLowerCase().includes(query))
+  );
+});
+
+const loadData = async () => {
+  try {
+    products.value = await db.table('products').orderBy('name').toArray();
+    listCategories.value = await db.table('categories').toArray();
+  } catch (err) {
+    console.error("Database Error:", err);
+  }
+};
+
+const openDetail = (p: Product) => {
+  detailProduct.value = p;
+  isDetailModalOpen.value = true;
+};
+
+const openEdit = (p: Product) => {
+  editingProduct.value = JSON.parse(JSON.stringify(p));
+  displayModal.value = formatRupiahDisplay(p.price_modal);
+  displaySell.value = formatRupiahDisplay(p.price_sell);
+  isDetailModalOpen.value = false;
+  isEditModalOpen.value = true;
+};
+
+const updateNumber = (field: 'price_modal' | 'price_sell', event: any) => {
+  let rawValue = event.target.value.replace(/\D/g, "");
+  let numValue = parseInt(rawValue) || 0;
+  if (editingProduct.value) {
+    editingProduct.value[field] = numValue;
+    if (field === 'price_modal') displayModal.value = formatRupiahDisplay(numValue);
+    if (field === 'price_sell') displaySell.value = formatRupiahDisplay(numValue);
+  }
+};
+
+const updateProduct = async () => {
+  if (!editingProduct.value) return;
+  try {
+    await db.table('products').put(JSON.parse(JSON.stringify(editingProduct.value)));
+    isEditModalOpen.value = false;
+    await loadData(); 
+    alert("Produk berhasil diperbarui");
+  } catch (err: any) {
+    alert("Gagal memperbarui: " + err.message);
+  }
+};
+
+const deleteProduct = async (id: any) => {
+  if (confirm("Hapus produk ini secara permanen?")) {
+    try {
+      await db.table('products').delete(id);
+      isDetailModalOpen.value = false;
+      await loadData();
+    } catch (err: any) {
+      alert("Gagal menghapus: " + err.message);
+    }
+  }
+};
+
+// --- LOGIKA EVENT LISTENER DARI FILE LAMA ---
+
+const handleScanEvent = (e: any) => {
+  if (isEditModalOpen.value && editingProduct.value) {
+    editingProduct.value.code = e.detail;
+  }
+};
+
+const handleOpenDetailEvent = (e: any) => {
+  const p = products.value.find(item => item.id === e.detail);
+  if (p) openDetail(p);
+};
+
+onMounted(() => {
+  loadData();
+  window.addEventListener('barcode-scanned-edit', handleScanEvent);
+  window.addEventListener('open-product-detail', handleOpenDetailEvent);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('barcode-scanned-edit', handleScanEvent);
+  window.removeEventListener('open-product-detail', handleOpenDetailEvent);
+});
+</script>
+
+<template>
+  <div class="min-h-full bg-slate-50">
+    <div class="flex flex-col gap-3 px-4 pt-4 pb-48">
+      <div 
+        v-for="p in filteredProducts" :key="p.id" 
+        @click="openDetail(p)"
+        class="bg-white p-4 rounded-4xl border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer"
+      >
+        <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
+          <img v-if="p.image" :src="p.image" class="w-full h-full object-cover">
+          <i v-else class="ri-shopping-bag-3-fill text-blue-300 text-xl"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="text-[13px] font-black text-slate-800 uppercase truncate leading-tight">{{ p.name }}</div>
+          <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">{{ p.code || 'Tanpa Kode' }}</span>
+              <span v-if="p.category" class="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">{{ p.category }}</span>
+          </div>
+          <div class="text-[11px] font-black text-blue-600 mt-1">{{ formatRupiah(p.price_sell) }}</div>
+        </div>
+        <div class="flex flex-col items-end gap-1">
+          <span class="text-[10px] font-black px-3 py-1 rounded-xl tracking-tighter" :class="p.qty <= 5 ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-400'">
+            {{ p.qty }} <span class="text-[8px] opacity-60 uppercase">{{ p.unit }}</span>
+          </span>
+          <i class="ri-arrow-right-s-line text-slate-300"></i>
+        </div>
+      </div>
+
+      <div v-if="filteredProducts.length === 0" class="py-20 text-center opacity-40">
+        <i class="ri-archive-line text-4xl mb-2 block"></i>
+        <p class="text-[10px] font-black uppercase tracking-widest">Tidak ada data ditemukan</p>
+      </div>
+    </div>
+
+    <div v-if="isDetailModalOpen && detailProduct" class="fixed inset-0 z-110 flex items-end justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="isDetailModalOpen = false">
+      <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 animate-slide-up shadow-2xl">
+        <div class="flex justify-center mb-4"><div class="w-12 h-1.5 bg-slate-100 rounded-full"></div></div>
+        
+        <div class="text-center mb-6">
+            <div class="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-3 overflow-hidden">
+                <img v-if="detailProduct.image" :src="detailProduct.image" class="w-full h-full object-cover">
+                <i v-else class="ri-shopping-bag-3-line text-4xl text-blue-500"></i>
+            </div>
+            <h2 class="text-lg font-black text-slate-800 uppercase italic leading-none">{{ detailProduct.name }}</h2>
+            <div class="flex justify-center gap-2 mt-3">
+                <span class="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase">{{ detailProduct.category || 'Tanpa Kategori' }}</span>
+                <span class="px-3 py-1 bg-blue-100 rounded-full text-[9px] font-black text-blue-600 uppercase">{{ detailProduct.code || 'Tanpa Barcode' }}</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 mb-8">
+            <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100">
+                <div class="text-[9px] font-black text-slate-400 uppercase mb-1">Stok & Satuan</div>
+                <div class="text-base font-black text-slate-800">{{ detailProduct.qty }} <small class="text-[10px] font-bold uppercase opacity-50">{{ detailProduct.unit }}</small></div>
+            </div>
+            <div class="bg-blue-600 p-4 rounded-3xl shadow-lg shadow-blue-100 text-right">
+                <div class="text-[9px] font-black text-white/60 uppercase mb-1">Harga Jual</div>
+                <div class="text-base font-black text-white">{{ formatRupiah(detailProduct.price_sell) }}</div>
+            </div>
+        </div>
+
+        <div class="flex gap-3">
+          <button @click="deleteProduct(detailProduct.id)" class="flex-1 py-4 bg-slate-100 text-slate-400 rounded-2xl font-black uppercase text-[10px] tracking-widest">Hapus</button>
+          <button @click="openEdit(detailProduct)" class="flex-2 py-4 bg-slate-800 text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg">Edit Data</button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="isEditModalOpen && editingProduct" class="fixed inset-0 z-120 flex items-end justify-center p-4 bg-slate-900/80 backdrop-blur-md" @click.self="isEditModalOpen = false">
+      <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate-slide-up overflow-y-auto max-h-[90vh]">
+        <div class="flex justify-between items-center mb-6">
+          <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Update Produk</h3>
+          <button @click="isEditModalOpen = false" class="bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center text-slate-400"><i class="ri-close-line text-xl"></i></button>
+        </div>
+
+        <div class="space-y-4">
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block">Nama Produk</label>
+            <input v-model="editingProduct.name" type="text" class="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-blue-500 transition-all uppercase text-sm">
+          </div>
+
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block">Kategori</label>
+            <select v-model="editingProduct.category" class="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none appearance-none">
+                <option value="">Tanpa Kategori</option>
+                <option v-for="cat in listCategories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
+            </select>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-[10px] font-black text-red-400 uppercase ml-2 mb-1 block">Harga Modal</label>
+              <input :value="displayModal" @input="updateNumber('price_modal', $event)" type="text" inputmode="numeric" class="w-full px-5 py-3 bg-red-50/50 border border-red-100 rounded-2xl font-black text-red-500 text-center outline-none">
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-blue-500 uppercase ml-2 mb-1 block">Harga Jual</label>
+              <input :value="displaySell" @input="updateNumber('price_sell', $event)" type="text" inputmode="numeric" class="w-full px-5 py-3 bg-blue-50 border border-blue-100 rounded-2xl font-black text-blue-600 text-center outline-none">
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block">Stok</label>
+              <input v-model.number="editingProduct.qty" type="number" class="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none text-center">
+            </div>
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block">Satuan</label>
+              <input v-model="editingProduct.unit" type="text" class="w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none text-center uppercase">
+            </div>
+          </div>
+        </div>
+
+        <button @click="updateProduct" class="w-full mt-8 py-4 bg-blue-600 text-white rounded-[20px] font-black uppercase text-[11px] tracking-[0.3em] shadow-lg active:scale-95 transition-all">Simpan Perubahan</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+
+
+
+src/components/pages/KategoriProduk.vue:
+<template>
+  <div class="flex flex-col gap-4 pb-24">
+    <div class="px-4 mt-2">
+      <h1 class="text-xl font-black text-slate-800 uppercase tracking-tighter">Manajemen Kategori</h1>
+      <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Kelola kategori produk retail Anda</p>
+    </div>
+
+    <div class="mx-4 p-5 bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col gap-3">
+      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Tambah Kategori</label>
+      <div class="flex items-stretch gap-2 h-12">
+        <input 
+          v-model="categoryName" 
+          @keyup.enter="addCategory"
+          type="text" 
+          class="flex-1 bg-slate-50 border border-slate-100 px-4 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all text-sm font-bold text-slate-700" 
+          placeholder="Snack, Minyak, Kurma...">
+        
+        <button 
+          @click="addCategory" 
+          class="bg-blue-600 text-white px-5 rounded-xl flex items-center justify-center active:scale-90 shadow-lg shadow-blue-100 transition-all"
+        >
+          <i class="ri-add-fill text-2xl"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2 px-4">
+      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block">
+        Kategori Aktif ({{ listCategories?.length || 0 }})
+      </label>
+      
+      <transition-group name="list" tag="div" class="flex flex-col gap-2">
+        <div v-for="cat in listCategories || []" :key="cat.id" 
+          class="p-4 bg-white rounded-2xl border border-slate-50 flex justify-between items-center shadow-sm hover:border-blue-100 transition-all"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
+              <i class="ri-price-tag-3-fill text-lg"></i>
+            </div>
+            <span class="font-bold text-slate-700 uppercase text-xs tracking-tight">{{ cat.name }}</span>
+          </div>
+          
+          <button 
+            @click="deleteCategory(cat.id)" 
+            class="w-10 h-10 flex items-center justify-center text-red-400 bg-red-50 rounded-xl active:bg-red-500 active:text-white transition-all"
+          >
+            <i class="ri-delete-bin-7-line text-lg"></i>
+          </button>
+        </div>
+      </transition-group>
+
+      <div v-if="listCategories && listCategories.length === 0" class="flex flex-col items-center justify-center py-16 text-slate-300">
+        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-sm">
+          <i class="ri-price-tag-3-line text-3xl opacity-20"></i>
+        </div>
+        <p class="text-[10px] italic uppercase font-black tracking-widest">Belum ada kategori</p>
+      </div>
+    </div>
+    
+    <div class="px-4 text-center mt-4">
+      <p class="text-[8px] text-slate-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 bg-slate-100 w-fit mx-auto px-3 py-1.5 rounded-full">
+        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+        Cloud Sync Active
+      </p>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { db } from "../../database";
+import { useObservable } from "@vueuse/rxjs";
+import { liveQuery } from "dexie";
+import { Observable } from 'rxjs';
+
+const categoryName = ref('');
+
+// LiveQuery Dexie to Observable
+const listCategories = useObservable(
+  (liveQuery(() => db.categories.toArray()) as unknown) as Observable<any[]>
+);
+
+const addCategory = async () => {
+  const name = categoryName.value.trim();
+  if (!name) return;
+
+  try {
+    await db.categories.add({ name });
+    categoryName.value = ''; 
+  } catch (err) {
+    console.error("Gagal menambah kategori:", err);
+  }
+};
+
+const deleteCategory = async (id: number | undefined) => {
+  if (!id || !confirm("Hapus kategori ini?")) return;
+  try {
+    await db.categories.delete(id);
+  } catch (err) {
+    console.error("Gagal menghapus kategori:", err);
+  }
+};
+</script>
+
+<style scoped>
+.list-enter-active, .list-leave-active { transition: all 0.3s ease; }
+.list-enter-from { opacity: 0; transform: translateX(-20px); }
+.list-leave-to { opacity: 0; transform: translateX(20px); }
+</style>
+
+
+
+src/components/pages/Penjualan.vue:
+<template>
+  <div class="flex flex-col h-[calc(100vh-110px)] relative overflow-hidden bg-slate-50">
+    
+    <div class="absolute top-2 left-4 right-4 z-50 flex justify-between items-center pointer-events-none">
+      
+      <button 
+        v-if="cart.items.length > 0"
+        @click="cart.resetCart()"
+        class="w-9 h-9 bg-white border border-red-100 rounded-full shadow-md flex items-center justify-center text-red-500 active:scale-90 active:bg-red-50 transition-all pointer-events-auto shadow-red-100/50"
+        title="Reset Keranjang"
+      >
+        <i class="ri-refresh-line text-lg font-bold"></i>
+      </button>
+      <div v-else></div>
+
+      <transition name="fade">
+        <div 
+          v-if="showJasaButton"
+          class="relative flex items-center bg-white border border-blue-200 rounded-full px-3 py-2 shadow-md active:scale-95 transition-all pointer-events-auto cursor-pointer"
+        >
+          <i class="ri-customer-service-2-line text-blue-600 text-sm"></i>
+          <select 
+            @change="onJasaSelected"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          >
+            <option value="" disabled selected>+ JASA</option>
+            <option v-for="j in listJasa" :key="j.id" :value="j.id">
+              {{ j.name }} (+{{ formatRupiah(j.price).replace('Rp', '').trim() }})
+            </option>
+          </select>
+          <span class="text-[10px] font-black uppercase text-blue-700 ml-1.5 tracking-tighter">Tambah Jasa</span>
+        </div>
+      </transition>
+    </div>
+
+    <div 
+      class="flex-1 flex flex-col min-h-0 bg-white mx-4 mt-2 rounded-t-[2.5rem] border-x border-t border-slate-100 shadow-sm relative overflow-hidden"
+    >
+      <div 
+        ref="scrollContainer"
+        class="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-20"
+      >
+        <div v-if="cart.items.length === 0" class="h-full flex flex-col items-center justify-center text-slate-300 py-20">
+          <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
+            <i class="ri-shopping-basket-line text-3xl opacity-20"></i>
+          </div>
+          <p class="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 italic">Belum ada barang</p>
+        </div>
+
+        <div v-else class="flex flex-col gap-3">
+          <div 
+            v-for="item in cart.items" :key="item.cartId" 
+            class="bg-slate-50 p-4 rounded-4xl border border-slate-100 flex flex-col gap-3 transition-all"
+          >
+            <div class="flex items-center justify-between">
+              <div class="min-w-0 flex-1">
+                <div class="text-[12px] font-black text-slate-700 uppercase leading-tight truncate pr-2">{{ item.name }}</div>
+                <div class="text-[10px] font-bold text-slate-400 mt-1">
+                  {{ formatRupiah(item.price_sell) }} <span class="mx-1 opacity-30">×</span> {{ item.qty }}
+                </div>
+              </div>
+              
+              <div class="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
+                <button @click="cart.updateQty(item.cartId, -1)" class="w-8 h-8 flex items-center justify-center rounded-lg text-red-500 font-black active:bg-red-50 transition-all">-</button>
+                <span class="text-[12px] font-black text-slate-700 min-w-6 text-center">{{ item.qty }}</span>
+                <button @click="cart.updateQty(item.cartId, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 font-black active:bg-blue-50 transition-all">+</button>
+              </div>
+            </div>
+
+            <div v-if="item.extraCharge > 0" 
+              class="flex justify-between items-center bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50"
+            >
+              <div class="flex items-center gap-2">
+                <i class="ri-fire-fill text-orange-500 text-xs"></i>
+                <div class="flex flex-col">
+                  <span class="text-[9px] font-black text-blue-800 uppercase tracking-tighter">{{ item.extraChargeName }}</span>
+                  <span class="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">{{ formatRupiah(item.extraCharge) }} × {{ item.extraChargeQty }}</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <button @click="cart.updateExtraQty(item.cartId, -1)" class="w-7 h-7 flex items-center justify-center text-orange-500 font-black bg-white border border-blue-100 rounded-lg">-</button>
+                <span class="text-[11px] font-black text-slate-700 min-w-4.5 text-center">{{ item.extraChargeQty }}</span>
+                <button @click="cart.updateExtraQty(item.cartId, 1)" class="w-7 h-7 flex items-center justify-center text-blue-600 font-black bg-white border border-blue-100 rounded-lg">+</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-4 bg-white border-t border-gray-100 shadow-[0_-15px_30px_rgba(0,0,0,0.05)] rounded-t-[2.5rem] shrink-0 z-40">
+      
+      <transition name="slide-up">
+        <div v-if="cart.payMethod === 'Tunai'" class="mb-4">
+          <div class="bg-slate-900 p-5 rounded-[2.5rem] shadow-2xl relative">
+            <div class="flex items-center gap-4 mb-4 relative z-10">
+              <div class="flex-1">
+                <label class="text-[10px] text-slate-500 font-black uppercase block mb-1 tracking-widest">Diterima</label>
+                <div class="flex items-baseline gap-1">
+                  <span class="text-blue-500 text-sm font-black italic">Rp</span>
+                  <input 
+                    type="number" 
+                    inputmode="numeric" 
+                    v-model.number="cart.cashAmount" 
+                    class="w-full bg-transparent border-none text-white text-3xl font-black outline-none p-0"
+                    placeholder="0"
+                  >
+                </div>
+              </div>
+              <div class="text-right border-l border-white/10 pl-6">
+                <div class="text-[10px] text-slate-500 font-black uppercase mb-1 tracking-widest text-right">Kembali</div>
+                <div :class="cart.kembalian > 0 ? 'text-green-400' : 'text-white'" class="text-2xl font-black italic tracking-tighter text-right">
+                  {{ formatRupiah(cart.kembalian).replace('Rp', '').trim() }}
+                </div>
+              </div>
+            </div>
+            
+            <button 
+              @click="handleMainButtonClick"
+              :disabled="cart.items.length === 0 || (cart.payMethod === 'Tunai' && cart.cashAmount > 0 && cart.cashAmount < cart.totalBelanja)"
+              class="w-full py-4 rounded-2xl bg-blue-600 text-white font-black uppercase text-[12px] tracking-widest active:scale-95 transition-all shadow-lg disabled:opacity-30"
+            >
+              {{ buttonLabel }}
+            </button>
+          </div>
+        </div>
+      </transition>
+
+      <div class="flex flex-col gap-4">
+        <div class="flex items-end justify-between px-2">
+          <span class="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em]">Total Tagihan</span>
+          <span class="text-3xl font-black text-slate-900 tracking-tighter">{{ formatRupiah(cart.totalBelanja) }}</span>
+        </div>
+        
+        <div class="flex gap-2 bg-slate-100 p-1.5 rounded-2xl border border-slate-200">
+          <button 
+            v-for="m in (['Tunai', 'QRIS', 'Tempo'] as const)" :key="m"
+            @click="cart.payMethod = (cart.payMethod === m ? null : m)"
+            :class="cart.payMethod === m ? 'bg-white text-slate-900 shadow-sm border-slate-300' : 'text-gray-400 border-transparent'"
+            class="flex-1 py-3.5 rounded-xl border text-[11px] font-black uppercase transition-all tracking-widest"
+          >
+            {{ m }}
+          </button>
+        </div>
+
+        <transition name="fade">
+          <button 
+            v-if="cart.payMethod && cart.payMethod !== 'Tunai'"
+            @click="handleCheckout"
+            :disabled="cart.items.length === 0"
+            class="w-full py-5 rounded-2xl bg-slate-900 text-white font-black text-[12px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all disabled:opacity-50"
+          >
+            PROSES {{ cart.payMethod.toUpperCase() }}
+          </button>
+        </transition>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
+import { useCartStore } from "../../stores/cart";
+import { db } from "../../database";
+
+const cart = useCartStore();
+const scrollContainer = ref<HTMLElement | null>(null);
+const listJasa = ref<Service[]>([]);
+
+interface Service {
+  id: number;
+  name: string;
+  price: number;
+}
+
+const formatRupiah = (val: number) => {
+  return new Intl.NumberFormat('id-ID', { 
+    style: 'currency', currency: 'IDR', maximumFractionDigits: 0 
+  }).format(val || 0);
+};
+
+// LOGIKA: Tombol Jasa hanya muncul jika ada kategori tertentu di keranjang
+const showJasaButton = computed(() => {
+  const needsService = ['Minyak', 'Kurma', 'Madu', 'Kitab'];
+  return cart.items.some(item => 
+    item.category && needsService.includes(item.category)
+  );
+});
+
+const buttonLabel = computed(() => {
+  if (cart.cashAmount === 0 || !cart.cashAmount) return 'UANG PAS';
+  if (cart.cashAmount < cart.totalBelanja) return 'UANG KURANG';
+  return 'SELESAIKAN TRANSAKSI';
+});
+
+onMounted(async () => {
+  listJasa.value = await db.table('services').toArray();
+  scrollToBottom();
+});
+
+const scrollToBottom = () => {
+  nextTick(() => {
+    if (scrollContainer.value) {
+      scrollContainer.value.scrollTo({ 
+        top: scrollContainer.value.scrollHeight, 
+        behavior: 'smooth' 
+      });
+    }
+  });
+};
+
+watch(() => cart.items, () => { scrollToBottom(); }, { deep: true });
+
+const onJasaSelected = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  const selectedId = target.value;
+  const selected = listJasa.value.find((j: Service) => j.id == Number(selectedId));
+  
+  if (selected && cart.items.length > 0) {
+    const lastItem = cart.items[cart.items.length - 1];
+    if (lastItem) {
+      cart.setExtraCharge(lastItem.cartId, { 
+        name: selected.name, 
+        price: selected.price 
+      });
+    }
+  }
+  target.value = "";
+};
+
+const handleMainButtonClick = () => {
+  if (cart.cashAmount === 0 || !cart.cashAmount) {
+    cart.cashAmount = cart.totalBelanja;
+  } else {
+    handleCheckout();
+  }
+};
+
+const handleCheckout = async () => {
+  if (cart.items.length === 0) return;
+  try {
+    const trxId = await cart.processCheckout();
+    console.log("Transaksi Berhasil", trxId);
+  } catch (err) {
+    console.error(err);
+    alert("Gagal memproses transaksi");
+  }
+};
+</script>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.slide-up-enter-active, .slide-up-leave-active {
+  transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.slide-up-enter-from, .slide-up-leave-to {
+  transform: translateY(100%);
+  opacity: 0;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+</style>
+
+
+
+src/composables/useProductSearch.ts:
+// src/composables/useProductSearch.ts
+import { ref } from 'vue';
+import { db } from '../database';
+
+export function useProductSearch() {
+  const suggestions = ref<any[]>([]);
+  const isFocused = ref(false);
+
+  // Fungsi Highlight (Identik dengan script Anda)
+  const highlightText = (text: string, query: string) => {
+    const search = query.trim();
+    if (!search) return text;
+    const safeQuery = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${safeQuery})`, 'gi');
+    return text.replace(regex, '<span class="text-blue-600 font-black">$1</span>');
+  };
+
+  // Logika Pintar Fetch Suggestions (Identik: startsWith -> localeCompare -> slice 8)
+  const fetchSuggestions = async (query: string) => {
+    if (!query || query.length < 1) {
+      suggestions.value = [];
+      return;
+    }
+
+    const search = query.toLowerCase().trim();
+    
+    const allMatches = await db.table('products')
+      .filter(p => p.name.toLowerCase().includes(search))
+      .toArray();
+
+    suggestions.value = allMatches.sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aStarts = aName.startsWith(search);
+      const bStarts = bName.startsWith(search);
+
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return aName.localeCompare(bName);
+    }).slice(0, 8);
+  };
+
+  const formatRupiah = (val: number) => {
+    return new Intl.NumberFormat('id-ID', { 
+      style: 'currency', currency: 'IDR', maximumFractionDigits: 0 
+    }).format(val || 0);
+  };
+
+  return {
+    suggestions,
+    isFocused,
+    fetchSuggestions,
+    highlightText,
+    formatRupiah
+  };
+}
+
+
+
+src/composables/useScanner.ts:
+// src/composables/useScanner.ts
+import { ref, onBeforeUnmount } from 'vue';
+import { Html5Qrcode } from "html5-qrcode";
+
+export function useScanner() {
+  let html5QrCode: Html5Qrcode | null = null;
+  const isScanning = ref(false);
+
+  const stopScanner = async () => {
+    if (html5QrCode && html5QrCode.isScanning) {
+      try {
+        await html5QrCode.stop();
+        await html5QrCode.clear();
+        html5QrCode = null;
+        isScanning.value = false;
+      } catch (err) {
+        console.error("Gagal menghentikan scanner:", err);
+      }
+    }
+  };
+
+  const startScanner = async (
+    elementId: string, 
+    onScanSuccessCallback: (text: string) => void,
+    onScanError?: (err: any) => void
+  ) => {
+    try {
+      // Pastikan instance lama dibersihkan
+      if (html5QrCode) await stopScanner();
+
+      html5QrCode = new Html5Qrcode(elementId);
+      isScanning.value = true;
+
+      const config = { 
+        fps: 10, 
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0 
+      };
+
+      await html5QrCode.start(
+        { facingMode: "environment" }, 
+        config, 
+        (decodedText) => {
+          onScanSuccessCallback(decodedText);
+        }, 
+        () => { /* Ignored: Frame scan fail normal */ }
+      );
+    } catch (err) {
+      console.error("Gagal memulai scanner:", err);
+      isScanning.value = false;
+      if (onScanError) onScanError(err);
+      throw err;
+    }
+  };
+
+  onBeforeUnmount(() => {
+    stopScanner();
+  });
+
+  return {
+    startScanner,
+    stopScanner,
+    isScanning
+  };
+}
+
+
+
+src/database/index.ts:
+// src/database/index.ts
+import Dexie, { type Table } from 'dexie';
+import { DEXIE_SCHEMA } from './schema';
+
+// --- INTERFACES (Definisi Data) ---
+// Kita tetap pertahankan di sini agar mudah di-import oleh komponen lain
+export interface Product {
+  id: string; 
+  name: string;
+  code: string;
+  category: string;
+  price_modal: number;
+  price_sell: number;
+  qty: number;
+  unit: string;
+}
+
+export interface ProductPackage {
+  id: string;
+  productId: string;
+  name: string;
+  qty_pcs: number;
+  price_sell: number;
+}
+
+export interface Transaction {
+  id: string;
+  date: string;
+  total: number;
+  memberId?: string | null;
+  paymentMethod: string;
+  amountPaid: number;
+  change: number;
+  status: string;
+  items: any[];
+}
+
+// --- DATABASE CLASS ---
+export class SinarPagiDB extends Dexie {
+  // Definisi Table dengan Type Safety
+  products!: Table<Product>;
+  product_packages!: Table<ProductPackage>;
+  categories!: Table<{ id?: number; name: string }>;
+  transactions!: Table<Transaction>;
+  members!: Table<any>;
+  expenses!: Table<any>;
+  digital_transactions!: Table<any>;
+  services!: Table<any>;
+  settings!: Table<any>;
+
+  constructor() {
+    super('SinarPagiDB');
+    
+    // Menggunakan schema dari src/database/schema.ts
+    // Tetap menggunakan versi 19 sesuai struktur Anda
+    this.version(19).stores(DEXIE_SCHEMA);
+  }
+}
+
+// Create Instance
+export const db = new SinarPagiDB();
+
+// --- HELPER: GENERATE UID (Anti-Tabrakan) ---
+export const generateUID = () => {
+  return 'SP-' + Date.now().toString(36) + '-' + Math.random().toString(36).substring(2, 7);
+};
+
+
+
+src/database/schema.ts:
+// src/database/schema.ts
+
+// Daftar semua tabel yang ada di Dexie SinarPagiDB
+export const DB_TABLES = [
+  'products',
+  'product_packages',
+  'categories',
+  'transactions',
+  'members',
+  'expenses',
+  'digital_transactions',
+  'services',
+  'settings'
+] as const;
+
+// Tipe data untuk nama tabel (untuk type-safety di TypeScript)
+export type TableName = typeof DB_TABLES[number];
+
+// Definisi store schema untuk Dexie (versi 19)
+export const DEXIE_SCHEMA = {
+  products: 'id, name, code, category',
+  product_packages: 'id, productId, name',
+  categories: '++id, name',
+  transactions: 'id, date, total, memberId',
+  members: 'id, name, phone',
+  expenses: 'id, date, category',
+  digital_transactions: 'id, date, type',
+  services: '++id, name',
+  settings: 'id, storeName'
+};
+
+
+
+src/main.ts:
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import './style.css' 
+import 'remixicon/fonts/remixicon.css'
+import App from './App.vue'
+import router from './router'
+import { auth } from './api/firebase' // Import auth dari file tadi
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { setupSyncHooks, startPullSync } from './api/sync'
+import { db } from './database'
+
+const app = createApp(App)
+const pinia = createPinia()
+app.use(pinia)
+app.use(router)
+
+// Fungsi untuk memulai aplikasi setelah Login & DB siap
+const initApp = () => {
+  db.open().then(() => {
+    console.log("✅ Database SinarPagiDB Aktif");
+    app.mount('#app');
+  });
+};
+
+// Pantau status Login
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("🔐 User terautentikasi:", user.email);
+    setupSyncHooks();
+    startPullSync(); // Jalankan sync hanya SETELAH login
+    initApp();
+  } else {
+    console.log("🔓 Belum login, mencoba login otomatis...");
+    // Ganti email & password dengan akun Firebase kamu yang asli
+    signInWithEmailAndPassword(auth, "hudzshop@gmail.com", "07NovembeR21")
+      .catch(err => {
+        console.error("❌ Login Gagal:", err.message);
+        initApp(); // Tetap jalankan app meski login gagal (offline mode)
+      });
+  }
+});
+
+
+
+src/router/index.ts:
+import { createRouter, createWebHistory } from 'vue-router'
+import PageView from '../views/PageView.vue'
+
+const routes = [
+  // GRUP 1
+  { path: '/', name: 'Dashboard', component: PageView, meta: { icon: 'ri-dashboard-3-line' } },
+  { path: '/penjualan', name: 'Penjualan', component: PageView, meta: { icon: 'ri-calculator-line', showScanner: true } },
+  { path: '/layanan-digital', name: 'Layanan Digital', component: PageView, meta: { icon: 'ri-smartphone-line' } },
+
+  // GRUP 2
+  { path: '/riwayat-transaksi', name: 'Riwayat Transaksi', component: PageView, meta: { icon: 'ri-history-line' } },
+  { path: '/stock-monitor', name: 'Stock Monitor', component: PageView, meta: { icon: 'ri-radar-line' } },
+  { path: '/piutang-penjualan', name: 'Piutang Penjualan', component: PageView, meta: { icon: 'ri-hand-coin-line' } },
+  { path: '/pengeluaran', name: 'Pengeluaran', component: PageView, meta: { icon: 'ri-shopping-basket-line' } },
+
+  // GRUP 3
+  { path: '/daftar-produk', name: 'Daftar Produk', component: PageView, meta: { icon: 'ri-list-settings-line', showScanner: true } },
+  { path: '/tambah-produk', name: 'Tambah Produk', component: PageView, meta: { icon: 'ri-add-box-line' } },
+  { path: '/kategori-produk', name: 'Kategori Produk', component: PageView, meta: { icon: 'ri-price-tag-3-line' } },
+  { path: '/harga-paket', name: 'Harga Paket', component: PageView, meta: { icon: 'ri-box-3-line' } },
+  { path: '/data-jasa', name: 'Data Jasa', component: PageView, meta: { icon: 'ri-customer-service-2-line' } },
+  { path: '/data-member', name: 'Data Member', component: PageView, meta: { icon: 'ri-user-heart-line' } },
+  { path: '/data-kasir', name: 'Data Kasir', component: PageView, meta: { icon: 'ri-user-star-line' } },
+
+  // GRUP 4
+  { path: '/laporan-harian', name: 'Laporan Harian', component: PageView, meta: { icon: 'ri-calendar-event-line' } },
+  { path: '/laba-rugi', name: 'Laba Rugi', component: PageView, meta: { icon: 'ri-funds-line' } },
+  { path: '/arus-uang', name: 'Arus Uang', component: PageView, meta: { icon: 'ri-exchange-funds-line' } },
+  { path: '/pengaturan', name: 'Pengaturan', component: PageView, meta: { icon: 'ri-settings-5-line' } },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+export default router
+
+
+
+src/stores/cart.ts:
+// src/stores/cart.ts
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { db, generateUID } from '../database';
+import type { CartItem, Product } from '../types';
+
+export const useCartStore = defineStore('cart', () => {
+  // --- STATE ---
+  const items = ref<CartItem[]>([]);
+  const payMethod = ref<'Tunai' | 'QRIS' | 'Tempo' | null>('Tunai');
+  const cashAmount = ref<number>(0);
+  const isScannerOpen = ref(false);
+  const selectedMemberId = ref<string | null>(null);
+  const searchQuery = ref<string>("");
+
+  // --- GETTERS ---
+  const totalBelanja = computed(() => {
+    return items.value.reduce((acc, item) => {
+      const subtotalProduk = (item.price_sell || 0) * (item.qty || 0);
+      const subtotalExtra = (item.extraCharge || 0) * (item.extraChargeQty || 0);
+      return acc + subtotalProduk + subtotalExtra;
+    }, 0);
+  });
+
+  const kembalian = computed(() => {
+    return Math.max(0, cashAmount.value - totalBelanja.value);
+  });
+
+  // --- ACTIONS ---
+
+  const clearSearch = () => {
+    searchQuery.value = "";
+  };
+
+  const toggleScanner = (status: boolean) => {
+    isScannerOpen.value = status;
+  };
+
+  const updateQty = (cartId: string, change: number) => {
+    const index = items.value.findIndex(i => i.cartId === cartId);
+    if (index !== -1) {
+      const item = items.value[index];
+      if (item) {
+        item.qty += change;
+        // Logika hapus jika qty habis
+        if (item.qty <= 0) {
+          items.value.splice(index, 1);
+        }
+      }
+    }
+  };
+
+  /**
+   * Menambahkan biaya tambahan (Jasa) ke item tertentu
+   */
+  const setExtraCharge = (cartId: string, service: { name: string; price: number }) => {
+    const item = items.value.find(i => i.cartId === cartId);
+    if (item) {
+      item.extraChargeName = service.name;
+      item.extraCharge = service.price;
+      // Jika qty jasa belum ada, samakan dengan qty produk
+      if (!item.extraChargeQty || item.extraChargeQty === 0) {
+        item.extraChargeQty = item.qty;
+      }
+    }
+  };
+
+  const updateExtraQty = (cartId: string, change: number) => {
+    const item = items.value.find(i => i.cartId === cartId);
+    if (item) {
+      const currentQty = item.extraChargeQty || 0;
+      item.extraChargeQty = Math.max(0, currentQty + change);
+    }
+  };
+
+  const removeExtraCharge = (cartId: string) => {
+    const item = items.value.find(i => i.cartId === cartId);
+    if (item) {
+      item.extraChargeName = '';
+      item.extraCharge = 0;
+      item.extraChargeQty = 0;
+    }
+  };
+
+  /**
+   * Menambahkan produk ke keranjang
+   * Menggunakan type Product untuk menghilangkan warning 'unused declaration'
+   */
+  const addToCart = (product: Product, isPackage = false) => {
+    const cartId = isPackage ? `${product.id}-pkg` : `${product.id}-reg`;
+    const existing = items.value.find(i => i.cartId === cartId);
+
+    if (existing) {
+      existing.qty++;
+      // Jika ada jasa, update juga qty jasanya secara sinkron
+      if (existing.extraChargeName) {
+        existing.extraChargeQty = (existing.extraChargeQty || 0) + 1;
+      }
+    } else {
+      items.value.push({
+        ...JSON.parse(JSON.stringify(product)), // Deep copy agar tidak merujuk ke objek database
+        cartId,
+        qty: 1,
+        extraCharge: 0,
+        extraChargeQty: 0,
+        extraChargeName: '',
+        // Penanganan harga dan reduksi stok untuk paket vs eceran
+        price_sell: isPackage ? (product.pack_price || product.price_sell) : product.price_sell,
+        qty_reduce: isPackage ? (product.pack_size || 1) : 1
+      });
+    }
+  };
+
+  const processCheckout = async () => {
+    const transactionId = generateUID();
+    
+    // Siapkan data transaksi
+    const transactionData = {
+      id: transactionId,
+      date: new Date().toISOString(),
+      timestamp: Date.now(),
+      total: totalBelanja.value,
+      memberId: selectedMemberId.value,
+      paymentMethod: payMethod.value,
+      amountPaid: cashAmount.value,
+      change: kembalian.value,
+      status: 'Selesai',
+      items: JSON.parse(JSON.stringify(items.value))
+    };
+
+    try {
+      // 1. Simpan ke database transaksi
+      await db.table('transactions').add(transactionData);
+
+      // 2. Update stok produk di database
+      for (const item of items.value) {
+        const p = await db.table('products').get(item.id);
+        if (p) {
+          const multiplier = item.qty_reduce || 1;
+          const totalReduce = item.qty * multiplier;
+          
+          await db.table('products').update(item.id, { 
+            qty: p.qty - totalReduce,
+            updatedAt: new Date().toISOString() 
+          });
+        }
+      }
+
+      // 3. Bersihkan keranjang
+      resetCart();
+      return transactionId;
+    } catch (error) {
+      console.error("Checkout Gagal:", error);
+      throw error;
+    }
+  };
+
+  const resetCart = () => {
+    items.value = [];
+    cashAmount.value = 0;
+    selectedMemberId.value = null;
+    payMethod.value = 'Tunai';
+    searchQuery.value = "";
+  };
+
+  return { 
+    items, payMethod, cashAmount, isScannerOpen, selectedMemberId, searchQuery,
+    totalBelanja, kembalian, 
+    addToCart, updateQty, processCheckout, resetCart, toggleScanner, clearSearch,
+    setExtraCharge, updateExtraQty, removeExtraCharge
+  };
+});
+
+
+
+src/style.css:
+@import "tailwindcss";
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f3f4f6; /* Gray-100 agar senada dengan MainLayout */
+}
+
+/* Reset dasar agar aplikasi penuh se-layar */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+body {
+  overflow: hidden; /* Mencegah scroll double karena kita pakai scroll di dalam card */
+}
+
+/* Custom Scrollbar minimalis untuk area daftar produk/keranjang */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+
+
+src/types/index.ts:
+// src/types/index.ts
+
+export interface Product {
+  id: string;
+  image: string | null;
+  name: string;
+  code: string;     // Ini biasanya Barcode atau Kode SKU
+  category: string;
+  unit: string;
+  price_modal: number;
+  price_sell: number;
+  qty: number;
+  qty_reduce: number;
+  pack_price: number;
+  pack_size: number;
+  updatedAt: string;
+}
+
+// Interface untuk item di keranjang belanja
+export interface CartItem extends Product {
+  cartId: string;      // ID unik untuk membedakan item yang sama tapi beda perlakuan
+  extraCharge: number; // Harga jasa tambahan (misal: seduh/giling)
+  extraChargeQty: number;
+  extraChargeName?: string;
+  // Tambahan: catatan jika diperlukan (opsional)
+  note?: string; 
+}
+
+// Interface untuk Jasa/Service (Misal: Jasa Seduh, Jasa Bungkus, dll)
+export interface ServiceItem {
+  id: string;
+  name: string;
+  price: number;
+}
+
+// Tambahan: Interface untuk Transaksi (Penting untuk simpan ke Firebase/Dexie)
+export interface Transaction {
+  id?: string;
+  timestamp: number;
+  items: CartItem[];
+  total: number;
+  payMethod: 'Tunai' | 'QRIS' | 'Tempo';
+  cashAmount: number;
+  change: number;
+  memberId?: string; // Jika pembeli adalah member
+  status: 'success' | 'pending' | 'canceled';
+}
+
+// Tambahan: Interface untuk Member (Sesuai kode awal kamu ada fitur pilih pelanggan)
+export interface Member {
+  id: string;
+  name: string;
+  phone?: string;
+  points?: number;
+}
+
+
+
+src/views/PageView.vue:
+<template>
+  <div class="min-h-full w-full">
+    <component :is="activeComponent" v-if="activeComponent" />
+
+    <div v-else class="p-8 animate-slide-up h-full flex flex-col">
+      <div class="flex items-center gap-4 mb-8">
+        <div class="w-14 h-14 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-blue-600">
+          <i :class="currentIcon" class="text-3xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter leading-none">
+            {{ title }}
+          </h1>
+          <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Sinar Pagi POS • Modul Sistem</p>
+        </div>
+      </div>
+
+      <div class="bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex-1 flex flex-col items-center justify-center text-center p-10 min-h-[60vh]">
+        <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
+          <i class="ri-hammer-line text-4xl text-slate-200"></i>
+        </div>
+        <h2 class="text-xl font-black text-slate-400 uppercase tracking-tighter">Tahap Migrasi</h2>
+        <p class="text-slate-400 max-w-xs mt-2 text-sm leading-relaxed">
+          Modul <span class="text-blue-600 font-bold">"{{ title }}"</span> sedang dalam proses pemindahan ke arsitektur Cloud Sync.
+        </p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, markRaw } from 'vue';
+import { useRoute } from 'vue-router';
+
+// IMPORT HALAMAN YANG SUDAH MIGRASI
+import Penjualan from '../components/pages/Penjualan.vue';
+import DaftarProduk from '../components/pages/DaftarProduk.vue'; 
+import KategoriProduk from '../components/pages/KategoriProduk.vue'; // Baru ditambahkan
+
+const route = useRoute();
+
+// Mapping Nama Route ke Komponen
+const componentsMap: Record<string, any> = {
+  'Penjualan': markRaw(Penjualan),
+  'Daftar Produk': markRaw(DaftarProduk),
+  'Kategori Produk': markRaw(KategoriProduk), // Sinkronkan dengan router
+};
+
+const title = computed(() => (route.name as string) || 'Halaman');
+const currentIcon = computed(() => (route.meta?.icon as string) || 'ri-bookmark-3-line');
+const activeComponent = computed(() => componentsMap[route.name as string]);
+</script>
+
+<style scoped>
+@keyframes slideUp {
+  from { transform: translateY(15px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+</style>
