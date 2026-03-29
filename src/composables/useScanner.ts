@@ -33,8 +33,8 @@ export function useScanner() {
 
       const config = { 
         fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0 
+        qrbox: { width: 350, height: 200 },
+        aspectRatio: 1.333333
       };
 
       await html5QrCode.start(
