@@ -4,6 +4,11 @@ import { db } from '@/database';
 export function useProductForm() {
   const isSaving = ref(false);
   const listCategories = ref<any[]>([]);
+  const allProducts = ref<any[]>([]);
+  const suggestions = ref<any[]>([]);
+  const showSuggestions = ref(false);
+  const isExistingProduct = ref(false);
+
   const displayModal = ref("");
   const displaySell = ref("");
   const displayPack = ref("");
@@ -15,7 +20,7 @@ export function useProductForm() {
   });
 
   const formatDisplay = (val: number) => {
-    if (!val) return "";
+    if (!val || val === 0) return "";
     return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
@@ -33,19 +38,110 @@ export function useProductForm() {
     }
   };
 
+  const selectProduct = (p: any) => {
+    product.value = { 
+      ...p, 
+      qty: 0, // Reset input stok baru agar tidak dobel
+      id: p.id 
+    };
+    displayModal.value = formatDisplay(p.price_modal);
+    displaySell.value = formatDisplay(p.price_sell);
+    isExistingProduct.value = true;
+    showSuggestions.value = false;
+  };
+
+  const resetForm = () => {
+    product.value = {
+      id: '', image: null, name: '', code: '',
+      category: 'Umum', unit: 'pcs', price_modal: 0, price_sell: 0,
+      qty: 0, pack_price: 0, pack_size: 1
+    };
+    displayModal.value = "";
+    displaySell.value = "";
+    displayPack.value = "";
+    isExistingProduct.value = false;
+    showSuggestions.value = false;
+  };
+
+  // --- LOGIKA PINTAR (PREFIX FIRST) ---
+  watch(() => product.value.name, (newName) => {
+    if (isExistingProduct.value) return;
+    
+    const query = newName.toLowerCase().trim();
+    
+    if (query.length >= 1) {
+      const filtered = allProducts.value
+        .filter(p => p.name.toLowerCase().includes(query))
+        .sort((a, b) => {
+          const nameA = a.name.toLowerCase();
+          const nameB = b.name.toLowerCase();
+          
+          // Prioritas 1: Yang AWALANNYA cocok (Contoh: "in" -> Indomie)
+          const startA = nameA.startsWith(query);
+          const startB = nameB.startsWith(query);
+          if (startA && !startB) return -1;
+          if (!startA && startB) return 1;
+
+          // Prioritas 2: Urutan Abjad
+          return nameA.localeCompare(nameB);
+        });
+
+      suggestions.value = filtered.slice(0, 8);
+      showSuggestions.value = suggestions.value.length > 0;
+    } else {
+      showSuggestions.value = false;
+    }
+  });
+
+  watch(() => product.value.code, (newCode) => {
+    if (newCode && !isExistingProduct.value) {
+      const exist = allProducts.value.find(p => p.code === newCode);
+      if (exist) selectProduct(exist);
+    }
+  });
+
   const saveProduct = async () => {
     if(!product.value.name || !product.value.price_sell) return alert("Nama dan Harga Jual wajib diisi!");
     isSaving.value = true;
     try {
-      const finalId = 'SP-' + Date.now().toString(36);
-      await db.products.add({ ...JSON.parse(JSON.stringify(product.value)), id: finalId, updatedAt: new Date().toISOString() });
-      alert("Produk Berhasil Disimpan!");
-      location.reload(); // Simple reset
-    } catch (err: any) { alert("Gagal: " + err.message); }
-    finally { isSaving.value = false; }
+      if (isExistingProduct.value) {
+        const oldProduct = allProducts.value.find(p => p.id === product.value.id);
+        const totalQty = (oldProduct?.qty || 0) + product.value.qty;
+        await db.table('products').update(product.value.id, { 
+          ...product.value, 
+          qty: totalQty,
+          updatedAt: new Date().toISOString() 
+        });
+      } else {
+        const finalId = 'SP-' + Date.now().toString(36);
+        await db.table('products').add({ 
+          ...product.value, 
+          id: finalId, 
+          updatedAt: new Date().toISOString() 
+        });
+      }
+      alert("Berhasil Disimpan!");
+      resetForm();
+      allProducts.value = await db.table('products').toArray();
+    } catch (err: any) { 
+      alert("Gagal: " + err.message); 
+    } finally { 
+      isSaving.value = false; 
+    }
   };
 
-  onMounted(async () => { listCategories.value = await db.categories.toArray(); });
+  onMounted(async () => {
+    const [cats, prods] = await Promise.all([
+      db.table('categories').toArray(),
+      db.table('products').toArray()
+    ]);
+    listCategories.value = cats;
+    allProducts.value = prods;
+  });
 
-  return { product, isSaving, listCategories, displayModal, displaySell, displayPack, updateNumber, saveProduct };
+  return { 
+    product, isSaving, listCategories, displayModal, displaySell, displayPack, 
+    suggestions, showSuggestions, isExistingProduct,
+    updateNumber, saveProduct, selectProduct, resetForm 
+  };
 }
