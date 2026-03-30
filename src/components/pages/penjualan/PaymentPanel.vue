@@ -70,9 +70,9 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useCartStore } from "../../../stores/cart";
-import { formatRupiah, formatNumber } from "../../../utils/formatters";
-import { PAYMENT_METHODS } from "../../../constants/app";
+import { useCartStore } from "@/stores/cart";
+import { formatRupiah, formatNumber } from "@/utils/formatters";
+import { PAYMENT_METHODS } from "@/constants/app";
 
 const emit = defineEmits(['checkout']);
 const cart = useCartStore();

@@ -30,8 +30,8 @@
 </template>
 
 <script setup lang="ts">
-import { formatRupiah } from "../../../utils/formatters";
-import type { Product } from "../../../types";
+import { formatRupiah } from "@/utils/formatters";
+import type { Product } from "@/types";
 
 defineProps<{ product: Product }>();
 defineEmits(['click']);

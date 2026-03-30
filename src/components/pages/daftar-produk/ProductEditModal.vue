@@ -76,9 +76,9 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
-import { formatNumber } from "../../../utils/formatters";
-import BaseButton from "../../../common/BaseButton.vue";
-import type { Product } from "../../../types";
+import { formatNumber } from "@/utils/formatters";
+import BaseButton from "@/common/BaseButton.vue";
+import type { Product } from "@/types";
 
 const props = defineProps<{ 
   product: Product | null,

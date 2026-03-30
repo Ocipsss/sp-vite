@@ -81,7 +81,7 @@
       <button 
         @click="saveProduct" 
         :disabled="isSaving"
-        class="w-full mt-7 bg-blue-600 text-white h-16 rounded-[1.5rem] font-black shadow-lg shadow-blue-200 uppercase text-[13px] tracking-wider active:scale-95 transition-all disabled:opacity-50 active:bg-blue-700 flex items-center justify-center gap-2"
+        class="w-full mt-7 bg-blue-600 text-white h-16 rounded-3xl font-black shadow-lg shadow-blue-200 uppercase text-[13px] tracking-wider active:scale-95 transition-all disabled:opacity-50 active:bg-blue-700 flex items-center justify-center gap-2"
       >
         <i v-if="isSaving" class="ri-loader-4-line animate-spin text-lg"></i>
         <span>{{ isSaving ? 'Menyimpan...' : 'Simpan Produk' }}</span>

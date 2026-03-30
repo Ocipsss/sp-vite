@@ -17,8 +17,8 @@
 </template>
 
 <script setup lang="ts">
-import { useCartStore } from "../../../stores/cart";
-import { useAutoScroll } from "../../../composables/useAutoScroll";
+import { useCartStore } from "@/stores/cart";
+import { useAutoScroll } from "@/composables/useAutoScroll";
 import CartItem from "./CartItem.vue";
 
 const cart = useCartStore();

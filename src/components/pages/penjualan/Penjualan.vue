@@ -8,12 +8,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useCartStore } from "../../../stores/cart";
-import { db } from "../../../database";
+import { useCartStore } from "@/stores/cart";
+import { db } from "@/database";
 import CartHeader from "./CartHeader.vue";
 import CartList from "./CartList.vue";
 import PaymentPanel from "./PaymentPanel.vue";
-import type { ServiceItem } from "../../../types";
+import type { ServiceItem } from "@/types";
 
 const cart = useCartStore();
 const listJasa = ref<ServiceItem[]>([]);

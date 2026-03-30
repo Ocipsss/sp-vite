@@ -37,9 +37,9 @@
 </template>
 
 <script setup lang="ts">
-import { useCartStore } from "../../../stores/cart";
-import { formatRupiah } from "../../../utils/formatters";
-import type { CartItem } from "../../../types";
+import { useCartStore } from "@/stores/cart";
+import { formatRupiah } from "@/utils/formatters";
+import type { CartItem } from "@/types";
 
 defineProps<{ item: CartItem }>();
 const cart = useCartStore();

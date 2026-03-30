@@ -29,11 +29,11 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { useCartStore } from "../../../stores/cart";
-import { formatNumber } from "../../../utils/formatters";
-import { CATEGORIES_WITH_SERVICE } from "../../../constants/app";
-import BaseButton from "../../../common/BaseButton.vue";
-import type { ServiceItem } from "../../../types";
+import { useCartStore } from "@/stores/cart";
+import { formatNumber } from "@/utils/formatters";
+import { CATEGORIES_WITH_SERVICE } from "@/constants/app";
+import BaseButton from "@/common/BaseButton.vue";
+import type { ServiceItem } from "@/types";
 
 const props = defineProps<{ listJasa: ServiceItem[] }>();
 const cart = useCartStore();

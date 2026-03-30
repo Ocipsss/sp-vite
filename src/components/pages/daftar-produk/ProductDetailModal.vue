@@ -35,9 +35,9 @@
 </template>
 
 <script setup lang="ts">
-import { formatRupiah } from "../../../utils/formatters";
-import BaseButton from "../../../common/BaseButton.vue";
-import type { Product } from "../../../types";
+import { formatRupiah } from "@/utils/formatters";
+import BaseButton from "@/common/BaseButton.vue";
+import type { Product } from "@/types";
 
 defineProps<{ product: Product | null }>();
 defineEmits(['close', 'edit', 'delete']);

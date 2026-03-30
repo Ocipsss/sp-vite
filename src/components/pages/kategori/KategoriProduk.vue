@@ -69,11 +69,11 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { db } from "../../../database";
+import { db } from "@/database";
 import { useObservable } from "@vueuse/rxjs";
 import { liveQuery } from "dexie";
 import { Observable } from 'rxjs';
-import BaseButton from "../../../common/BaseButton.vue";
+import BaseButton from "@/common/BaseButton.vue";
 
 const categoryName = ref('');
 

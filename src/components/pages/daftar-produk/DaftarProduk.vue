@@ -34,12 +34,12 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { db } from "../../../database"; 
-import { useCartStore } from "../../../stores/cart";
+import { db } from "@/database"; 
+import { useCartStore } from "@/stores/cart";
 import ProductItem from "./ProductItem.vue";
-import ProductDetailModal from "./ProductDetailModal.vue"; // Kamu perlu buat file ini
-import ProductEditModal from "./ProductEditModal.vue";     // Kamu perlu buat file ini
-import type { Product } from "../../../types";
+import ProductDetailModal from "./ProductDetailModal.vue";
+import ProductEditModal from "./ProductEditModal.vue";
+import type { Product } from "@/types";
 
 const cart = useCartStore();
 const products = ref<Product[]>([]);

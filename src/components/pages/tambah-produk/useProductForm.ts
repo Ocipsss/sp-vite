@@ -1,5 +1,5 @@
 import { ref, watch, onMounted } from 'vue';
-import { db } from '../../../database';
+import { db } from '@/database';
 
 export function useProductForm() {
   const isSaving = ref(false);
