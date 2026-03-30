@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { db, generateUID } from '../database';
-import type { CartItem, Product } from '../types';
+import { db, generateUID } from '@/database';
+import type { CartItem, Product } from '@/types';
 
 // Import Utilities & Constants
-import { calculateCartTotal, calculateChange } from '../utils/calculators';
-import { deepCopy } from '../utils/formatters';
-import { TRANSACTION_STATUS } from '../constants/app';
+import { calculateCartTotal, calculateChange } from '@/utils/calculators';
+import { deepCopy } from '@/utils/formatters';
+import { TRANSACTION_STATUS } from '@/constants/app';
 
 export const useCartStore = defineStore('cart', () => {
   // --- STATE ---

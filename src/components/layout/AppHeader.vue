@@ -53,7 +53,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useCartStore } from '../../stores/cart';
+import { useCartStore } from '@/stores/cart';
 import GlobalSearch from './GlobalSearch.vue';
 
 const props = defineProps<{ isSidebarOpen: boolean }>();

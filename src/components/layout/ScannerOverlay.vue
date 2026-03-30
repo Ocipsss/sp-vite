@@ -10,7 +10,7 @@
       </button>
     </div>
 
-    <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 bg-slate-50 aspect-[4/3] shadow-inner"></div>
+    <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 bg-slate-50 aspect-4/3 shadow-inner"></div>
 
     <div class="mt-auto py-8 text-center">
       <span class="text-[9px] text-gray-400 font-black tracking-[0.3em] uppercase italic">Sinar Pagi POS System</span>
@@ -20,9 +20,9 @@
 
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount } from 'vue';
-import { useCartStore } from '../../stores/cart';
-import { useScanner } from '../../composables/useScanner';
-import { db } from '../../database';
+import { useCartStore } from '@/stores/cart';
+import { useScanner } from '@/composables/useScanner';
+import { db } from '@/database';
 
 const cart = useCartStore();
 const { startScanner, stopScanner } = useScanner();

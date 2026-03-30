@@ -1,5 +1,5 @@
 import { ref } from 'vue';
-import { db } from '../database';
+import { db } from '@/database';
 
 export function useProductSearch() {
   const suggestions = ref<any[]>([]);

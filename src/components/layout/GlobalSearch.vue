@@ -51,8 +51,8 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onBeforeUnmount } from 'vue';
-import { useProductSearch } from '../../composables/useProductSearch';
-import { useCartStore } from '../../stores/cart';
+import { useProductSearch } from '@/composables/useProductSearch';
+import { useCartStore } from '@/stores/cart';
 
 const props = defineProps<{
   modelValue: string;

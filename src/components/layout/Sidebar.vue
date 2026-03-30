@@ -47,7 +47,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { MENU_GROUPS } from '../../constants/menu';
+import { MENU_GROUPS } from '@/constants/menu';
 
 defineProps<{ isPulling: boolean }>();
 defineEmits(['navigate', 'sync']);

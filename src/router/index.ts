@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import PageView from '../views/PageView.vue'
+import PageView from '@/views/PageView.vue'
 
 const routes = [
   // GRUP 1

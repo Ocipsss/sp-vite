@@ -1,46 +1,3 @@
-package.json:
-{
-  "name": "sp-vite",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc && vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext .vue,.js,.jsx,.ts,.tsx --fix",
-    "type-check": "vue-tsc --noEmit"
-  },
-  "dependencies": {
-    "@picocss/pico": "^2.1.1",
-    "@unocss/reset": "^66.6.6",
-    "@vueuse/rxjs": "^14.2.1",
-    "dexie": "^4.3.0",
-    "esc-pos-encoder": "^3.0.0",
-    "firebase": "^12.10.0",
-    "html5-qrcode": "^2.3.8",
-    "pinia": "^3.0.4",
-    "remixicon": "^4.9.1",
-    "rxjs": "^7.8.2",
-    "vue": "^3.5.25",
-    "vue-router": "^4.6.4"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4.2.1",
-    "@types/node": "^24.10.1",
-    "@vitejs/plugin-vue": "^6.0.2",
-    "@vue/tsconfig": "^0.8.1",
-    "autoprefixer": "^10.4.27",
-    "postcss": "^8.5.8",
-    "tailwindcss": "^4.2.1",
-    "typescript": "~5.9.3",
-    "vite": "^7.3.1",
-    "vue-tsc": "^3.1.5"
-  }
-}
-
-
-
 src/App.vue:
 <script setup lang="ts">
 import MainLayout from './components/layout/MainLayout.vue'
@@ -52,6 +9,89 @@ import 'remixicon/fonts/remixicon.css'
     <router-view />
   </MainLayout>
 </template>
+
+
+
+src/main.ts:
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import './style.css' 
+import 'remixicon/fonts/remixicon.css'
+import App from './App.vue'
+import router from './router'
+import { auth } from './api/firebase' // Import auth dari file tadi
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { setupSyncHooks, startPullSync } from './api/sync'
+import { db } from './database'
+
+const app = createApp(App)
+const pinia = createPinia()
+app.use(pinia)
+app.use(router)
+
+// Fungsi untuk memulai aplikasi setelah Login & DB siap
+const initApp = () => {
+  db.open().then(() => {
+    console.log("✅ Database SinarPagiDB Aktif");
+    app.mount('#app');
+  });
+};
+
+// Pantau status Login
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("🔐 User terautentikasi:", user.email);
+    setupSyncHooks();
+    startPullSync(); // Jalankan sync hanya SETELAH login
+    initApp();
+  } else {
+    console.log("🔓 Belum login, mencoba login otomatis...");
+    // Ganti email & password dengan akun Firebase kamu yang asli
+    signInWithEmailAndPassword(auth, "hudzshop@gmail.com", "07NovembeR21")
+      .catch(err => {
+        console.error("❌ Login Gagal:", err.message);
+        initApp(); // Tetap jalankan app meski login gagal (offline mode)
+      });
+  }
+});
+
+src/style.css:
+@import "tailwindcss";
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f3f4f6; /* Gray-100 agar senada dengan MainLayout */
+}
+
+/* Reset dasar agar aplikasi penuh se-layar */
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+body {
+  overflow: hidden; /* Mencegah scroll double karena kita pakai scroll di dalam card */
+}
+
+/* Custom Scrollbar minimalis untuk area daftar produk/keranjang */
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
 
 
 
@@ -77,7 +117,6 @@ export const auth = getAuth(app); // Ekspor Auth agar bisa dipakai di tempat lai
 
 
 src/api/sync.ts:
-// src/api/sync.ts
 import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
 import { fdb } from "./firebase";
 import { db } from "../database";
@@ -533,7 +572,7 @@ src/components/layout/ScannerOverlay.vue:
       </button>
     </div>
 
-    <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 bg-slate-50 aspect-square shadow-inner"></div>
+    <div id="reader" class="rounded-[2.5rem] overflow-hidden border-4 border-blue-50 bg-slate-50 aspect-[4/3] shadow-inner"></div>
 
     <div class="mt-auto py-8 text-center">
       <span class="text-[9px] text-gray-400 font-black tracking-[0.3em] uppercase italic">Sinar Pagi POS System</span>
@@ -643,755 +682,9 @@ const getMenuClass = (page: string) => [
 
 
 
-src/components/pages/daftar-produk/DaftarProduk.vue:
-<template>
-  <div class="min-h-full bg-slate-50">
-    <div class="flex flex-col gap-3 px-4 pt-4 pb-48">
-      <ProductItem 
-        v-for="p in filteredProducts" 
-        :key="p.id" 
-        :product="p" 
-        @click="openDetail" 
-      />
-
-      <div v-if="filteredProducts.length === 0" class="py-20 text-center opacity-40">
-        <i class="ri-archive-line text-4xl mb-2 block"></i>
-        <p class="text-[10px] font-black uppercase tracking-widest">Tidak ada data ditemukan</p>
-      </div>
-    </div>
-
-    <ProductDetailModal 
-      v-if="isDetailModalOpen" 
-      :product="selectedProduct" 
-      @close="isDetailModalOpen = false"
-      @edit="openEdit"
-      @delete="handleDelete"
-    />
-
-    <ProductEditModal 
-      v-if="isEditModalOpen" 
-      :product="selectedProduct"
-      :categories="listCategories"
-      @close="isEditModalOpen = false"
-      @save="handleUpdate"
-    />
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { db } from "../../../database"; 
-import { useCartStore } from "../../../stores/cart";
-import ProductItem from "./ProductItem.vue";
-import ProductDetailModal from "./ProductDetailModal.vue"; // Kamu perlu buat file ini
-import ProductEditModal from "./ProductEditModal.vue";     // Kamu perlu buat file ini
-import type { Product } from "../../../types";
-
-const cart = useCartStore();
-const products = ref<Product[]>([]);
-const listCategories = ref<any[]>([]);
-
-const isEditModalOpen = ref(false);
-const isDetailModalOpen = ref(false);
-const selectedProduct = ref<Product | null>(null);
-
-// Menggunakan filter dari store
-const filteredProducts = computed(() => {
-  const query = (cart.searchQuery || "").toLowerCase().trim();
-  if (!query) return products.value;
-  return products.value.filter(p => 
-    p.name.toLowerCase().includes(query) || (p.code && p.code.toLowerCase().includes(query))
-  );
-});
-
-const loadData = async () => {
-  products.value = await db.table('products').orderBy('name').toArray();
-  listCategories.value = await db.table('categories').toArray();
-};
-
-const openDetail = (p: Product) => {
-  selectedProduct.value = p;
-  isDetailModalOpen.value = true;
-};
-
-const openEdit = (p: Product) => {
-  selectedProduct.value = p;
-  isDetailModalOpen.value = false;
-  isEditModalOpen.value = true;
-};
-
-const handleUpdate = async (updatedProduct: Product) => {
-  try {
-    await db.table('products').put({
-      ...updatedProduct,
-      updatedAt: new Date().toISOString()
-    });
-    isEditModalOpen.value = false;
-    await loadData();
-  } catch (err) {
-    console.error("Update failed:", err);
-  }
-};
-
-const handleDelete = async (id: string) => {
-  if (confirm("Hapus produk ini secara permanen?")) {
-    await db.table('products').delete(id);
-    isDetailModalOpen.value = false;
-    await loadData();
-  }
-};
-
-// Event Listeners
-const handleOpenDetailEvent = (e: CustomEvent) => {
-  const p = products.value.find(item => item.id === e.detail);
-  if (p) openDetail(p);
-};
-
-onMounted(() => {
-  loadData();
-  window.addEventListener('open-product-detail', handleOpenDetailEvent as EventListener);
-});
-
-onUnmounted(() => {
-  window.removeEventListener('open-product-detail', handleOpenDetailEvent as EventListener);
-});
-</script>
-
-
-
-src/components/pages/daftar-produk/ProductDetailModal.vue:
-<template>
-  <div class="fixed inset-0 z-110 flex items-end justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="$emit('close')">
-    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 animate-slide-up shadow-2xl">
-      <div class="flex justify-center mb-4"><div class="w-12 h-1.5 bg-slate-100 rounded-full"></div></div>
-      
-      <div v-if="product" class="text-center mb-6">
-          <div class="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-3 overflow-hidden border border-slate-50">
-              <img v-if="product.image" :src="product.image" class="w-full h-full object-cover">
-              <i v-else class="ri-shopping-bag-3-line text-4xl text-blue-500"></i>
-          </div>
-          <h2 class="text-lg font-black text-slate-800 uppercase italic leading-none">{{ product.name }}</h2>
-          <div class="flex justify-center gap-2 mt-3">
-              <span class="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase">{{ product.category || 'Tanpa Kategori' }}</span>
-              <span class="px-3 py-1 bg-blue-100 rounded-full text-[9px] font-black text-blue-600 uppercase">{{ product.code || 'Tanpa Barcode' }}</span>
-          </div>
-      </div>
-
-      <div v-if="product" class="grid grid-cols-2 gap-4 mb-8">
-          <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100">
-              <div class="text-[9px] font-black text-slate-400 uppercase mb-1">Stok & Satuan</div>
-              <div class="text-base font-black text-slate-800">{{ product.qty }} <small class="text-[10px] font-bold uppercase opacity-50">{{ product.unit }}</small></div>
-          </div>
-          <div class="bg-blue-600 p-4 rounded-3xl shadow-lg shadow-blue-100 text-right">
-              <div class="text-[9px] font-black text-white/60 uppercase mb-1">Harga Jual</div>
-              <div class="text-base font-black text-white">{{ formatRupiah(product.price_sell) }}</div>
-          </div>
-      </div>
-
-      <div class="flex gap-3">
-        <BaseButton variant="danger" block size="lg" label="HAPUS" @click="$emit('delete', product?.id)" />
-        <BaseButton variant="primary" block size="lg" label="EDIT DATA" @click="$emit('edit', product)" />
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { formatRupiah } from "../../../utils/formatters";
-import BaseButton from "../../../common/BaseButton.vue";
-import type { Product } from "../../../types";
-
-defineProps<{ product: Product | null }>();
-defineEmits(['close', 'edit', 'delete']);
-</script>
-
-
-
-src/components/pages/daftar-produk/ProductEditModal.vue:
-<template>
-  <div :class="ui.modalOverlay" @click.self="$emit('close')">
-    <div :class="ui.modalContent">
-      <div class="flex justify-between items-center mb-6">
-        <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Update Produk</h3>
-        <button @click="$emit('close')" :class="ui.closeBtn">
-          <i class="ri-close-line text-xl"></i>
-        </button>
-      </div>
-
-      <div class="space-y-4">
-        <div>
-          <label :class="ui.label">Nama Produk</label>
-          <input v-model="form.name" type="text" :class="[ui.input, 'uppercase text-sm']">
-        </div>
-
-        <div>
-          <label :class="ui.label">Kategori</label>
-          <div class="relative">
-            <select v-model="form.category" :class="[ui.input, 'appearance-none']">
-                <option value="">Tanpa Kategori</option>
-                <option v-for="cat in categories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
-            </select>
-            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
-              <i class="ri-arrow-down-s-line"></i>
-            </div>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label :class="[ui.label, 'text-red-400']">Harga Modal</label>
-            <input 
-              v-model="displayModal" 
-              @input="updatePrice('price_modal', $event)" 
-              type="text" 
-              inputmode="numeric" 
-              :class="[ui.input, 'bg-red-50/50 border-red-100 text-red-500 text-center font-black']"
-            >
-          </div>
-          <div>
-            <label :class="[ui.label, 'text-blue-500']">Harga Jual</label>
-            <input 
-              v-model="displaySell" 
-              @input="updatePrice('price_sell', $event)" 
-              type="text" 
-              inputmode="numeric" 
-              :class="[ui.input, 'bg-blue-50 border-blue-100 text-blue-600 text-center font-black']"
-            >
-          </div>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label :class="ui.label">Stok</label>
-            <input v-model.number="form.qty" type="number" :class="[ui.input, 'text-center']">
-          </div>
-          <div>
-            <label :class="ui.label">Satuan</label>
-            <input v-model="form.unit" type="text" :class="[ui.input, 'text-center uppercase']">
-          </div>
-        </div>
-      </div>
-
-      <BaseButton 
-        variant="primary" 
-        block 
-        size="lg" 
-        label="SIMPAN PERUBAHAN" 
-        class="mt-8" 
-        @click="$emit('save', form)" 
-      />
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
-import { formatNumber } from "../../../utils/formatters";
-import BaseButton from "../../../common/BaseButton.vue";
-import type { Product } from "../../../types";
-
-const props = defineProps<{ 
-  product: Product | null,
-  categories: any[]
-}>();
-
-const emit = defineEmits(['close', 'save']);
-
-// --- UI STYLES (Pengganti @apply) ---
-const ui = {
-  modalOverlay: "fixed inset-0 z-120 flex items-end justify-center p-4 bg-slate-900/80 backdrop-blur-md",
-  modalContent: "bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate-slide-up overflow-y-auto max-h-[90vh]",
-  closeBtn: "bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center text-slate-400 active:scale-90 transition-transform",
-  label: "text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block",
-  input: "w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-blue-500 transition-all"
-};
-
-// --- LOGIC & STATE ---
-const form = ref<Product>({ ...props.product } as Product);
-const displayModal = ref(formatNumber(form.value.price_modal));
-const displaySell = ref(formatNumber(form.value.price_sell));
-
-const updatePrice = (field: 'price_modal' | 'price_sell', event: any) => {
-  let rawValue = event.target.value.replace(/\D/g, "");
-  let numValue = parseInt(rawValue) || 0;
-  form.value[field] = numValue;
-  
-  if (field === 'price_modal') displayModal.value = formatNumber(numValue);
-  if (field === 'price_sell') displaySell.value = formatNumber(numValue);
-};
-
-// Handle Barcode Scan
-const handleScan = (e: any) => {
-  form.value.code = e.detail;
-};
-
-onMounted(() => window.addEventListener('barcode-scanned-edit', handleScan));
-onUnmounted(() => window.removeEventListener('barcode-scanned-edit', handleScan));
-</script>
-
-<style scoped>
-.animate-slide-up {
-  animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-}
-@keyframes slideUp {
-  from { transform: translateY(100%); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-</style>
-
-
-
-src/components/pages/daftar-produk/ProductItem.vue:
-<template>
-  <div 
-    @click="$emit('click', product)"
-    class="bg-white p-4 rounded-4xl border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer"
-  >
-    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
-      <img v-if="product.image" :src="product.image" class="w-full h-full object-cover">
-      <i v-else class="ri-shopping-bag-3-fill text-blue-300 text-xl"></i>
-    </div>
-    
-    <div class="flex-1 min-w-0">
-      <div class="text-[13px] font-black text-slate-800 uppercase truncate">{{ product.name }}</div>
-      <div class="flex items-center gap-2 mt-0.5">
-          <span class="text-[9px] text-slate-400 font-bold uppercase">{{ product.code || 'Tanpa Kode' }}</span>
-          <span v-if="product.category" class="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">
-            {{ product.category }}
-          </span>
-      </div>
-      <div class="text-[11px] font-black text-blue-600 mt-1">{{ formatRupiah(product.price_sell) }}</div>
-    </div>
-
-    <div class="flex flex-col items-end gap-1">
-      <span class="text-[10px] font-black px-3 py-1 rounded-xl" 
-            :class="product.qty <= 5 ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-400'">
-        {{ product.qty }} <span class="text-[8px] opacity-60 uppercase">{{ product.unit }}</span>
-      </span>
-      <i class="ri-arrow-right-s-line text-slate-300"></i>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { formatRupiah } from "../../../utils/formatters";
-import type { Product } from "../../../types";
-
-defineProps<{ product: Product }>();
-defineEmits(['click']);
-</script>
-
-
-
-src/components/pages/kategori/KategoriProduk.vue:
-<template>
-  <div class="flex flex-col gap-4 pb-24">
-    <div class="px-4 mt-2">
-      <h1 class="text-xl font-black text-slate-800 uppercase tracking-tighter">Manajemen Kategori</h1>
-      <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Kelola kategori produk retail Anda</p>
-    </div>
-
-    <div class="mx-4 p-5 bg-white rounded-3xl shadow-sm border border-slate-100 flex flex-col gap-3">
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Tambah Kategori</label>
-      <div class="flex items-stretch gap-2 h-12">
-        <input 
-          v-model="categoryName" 
-          @keyup.enter="addCategory"
-          type="text" 
-          class="flex-1 bg-slate-50 border border-slate-100 px-4 rounded-xl outline-none focus:border-blue-500 focus:bg-white transition-all text-sm font-bold text-slate-700" 
-          placeholder="Snack, Minyak, Kurma..."
-        >
-        
-        <BaseButton 
-          variant="primary"
-          icon="ri-add-fill"
-          class="rounded-xl px-5"
-          @click="addCategory" 
-        />
-      </div>
-    </div>
-
-    <div class="flex flex-col gap-2 px-4">
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1 block">
-        Kategori Aktif ({{ listCategories?.length || 0 }})
-      </label>
-      
-      <transition-group name="list" tag="div" class="flex flex-col gap-2">
-        <div v-for="cat in listCategories || []" :key="cat.id" 
-          class="p-4 bg-white rounded-2xl border border-slate-50 flex justify-between items-center shadow-sm hover:border-blue-100 transition-all"
-        >
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 bg-blue-50 text-blue-500 rounded-xl flex items-center justify-center">
-              <i class="ri-price-tag-3-fill text-lg"></i>
-            </div>
-            <span class="font-bold text-slate-700 uppercase text-xs tracking-tight">{{ cat.name }}</span>
-          </div>
-          
-          <button 
-            @click="deleteCategory(cat.id)" 
-            class="w-10 h-10 flex items-center justify-center text-red-400 bg-red-50 rounded-xl active:bg-red-500 active:text-white transition-all"
-          >
-            <i class="ri-delete-bin-7-line text-lg"></i>
-          </button>
-        </div>
-      </transition-group>
-
-      <div v-if="listCategories && listCategories.length === 0" class="flex flex-col items-center justify-center py-16 text-slate-300">
-        <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center mb-4 border border-slate-100 shadow-sm">
-          <i class="ri-price-tag-3-line text-3xl opacity-20"></i>
-        </div>
-        <p class="text-[10px] italic uppercase font-black tracking-widest">Belum ada kategori</p>
-      </div>
-    </div>
-    
-    <div class="px-4 text-center mt-4">
-      <p class="text-[8px] text-slate-400 font-bold uppercase tracking-widest flex items-center justify-center gap-1.5 bg-slate-100 w-fit mx-auto px-3 py-1.5 rounded-full">
-        <span class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
-        Cloud Sync Active
-      </p>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref } from 'vue';
-import { db } from "../../../database";
-import { useObservable } from "@vueuse/rxjs";
-import { liveQuery } from "dexie";
-import { Observable } from 'rxjs';
-import BaseButton from "../../../common/BaseButton.vue";
-
-const categoryName = ref('');
-
-// LiveQuery Dexie to Observable (Auto-sync UI)
-const listCategories = useObservable(
-  (liveQuery(() => db.categories.toArray()) as unknown) as Observable<any[]>
-);
-
-const addCategory = async () => {
-  const name = categoryName.value.trim();
-  if (!name) return;
-
-  try {
-    await db.categories.add({ name });
-    categoryName.value = ''; 
-  } catch (err) {
-    console.error("Gagal menambah kategori:", err);
-  }
-};
-
-const deleteCategory = async (id: number | undefined) => {
-  if (!id || !confirm("Hapus kategori ini?")) return;
-  try {
-    await db.categories.delete(id);
-  } catch (err) {
-    console.error("Gagal menghapus kategori:", err);
-  }
-};
-</script>
-
-<style scoped>
-.list-enter-active, .list-leave-active { transition: all 0.3s ease; }
-.list-enter-from { opacity: 0; transform: translateX(-20px); }
-.list-leave-to { opacity: 0; transform: translateX(20px); }
-</style>
-
-
-
-src/components/pages/penjualan/CartHeader.vue:
-<template>
-  <div class="absolute top-2 left-4 right-4 z-50 flex justify-between items-center pointer-events-none">
-    <BaseButton 
-      v-if="cart.items.length > 0"
-      variant="danger" size="sm" icon="ri-refresh-line"
-      class="pointer-events-auto rounded-full shadow-md shadow-red-100"
-      @click="cart.resetCart()"
-      title="Reset Keranjang"
-    />
-    <div v-else></div>
-
-    <transition name="fade">
-      <div 
-        v-if="showJasaButton"
-        class="relative flex items-center bg-white border border-blue-200 rounded-full px-3 py-2 shadow-md active:scale-95 transition-all pointer-events-auto cursor-pointer"
-      >
-        <i class="ri-customer-service-2-line text-blue-600 text-sm"></i>
-        <select @change="onJasaSelected" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-          <option value="" disabled selected>+ JASA</option>
-          <option v-for="j in listJasa" :key="j.id" :value="j.id">
-            {{ j.name }} (+{{ formatNumber(j.price) }})
-          </option>
-        </select>
-        <span class="text-[10px] font-black uppercase text-blue-700 ml-1.5 tracking-tighter">Tambah Jasa</span>
-      </div>
-    </transition>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
-import { useCartStore } from "../../../stores/cart";
-import { formatNumber } from "../../../utils/formatters";
-import { CATEGORIES_WITH_SERVICE } from "../../../constants/app";
-import BaseButton from "../../../common/BaseButton.vue";
-import type { ServiceItem } from "../../../types";
-
-const props = defineProps<{ listJasa: ServiceItem[] }>();
-const cart = useCartStore();
-
-const showJasaButton = computed(() => 
-  cart.items.some(item => item.category && CATEGORIES_WITH_SERVICE.includes(item.category))
-);
-
-const onJasaSelected = (event: Event) => {
-  const target = event.target as HTMLSelectElement;
-  const selected = props.listJasa.find(j => j.id === target.value); 
-  const lastItem = cart.items[cart.items.length - 1];
-
-  if (selected && lastItem) {
-    cart.setExtraCharge(lastItem.cartId, { name: selected.name, price: selected.price });
-  }
-  target.value = "";
-};
-</script>
-
-
-
-src/components/pages/penjualan/CartItem.vue:
-<template>
-  <div class="bg-slate-50 p-4 rounded-4xl border border-slate-100 flex flex-col gap-3">
-    <div class="flex items-center justify-between">
-      <div class="min-w-0 flex-1">
-        <div class="text-[12px] font-black text-slate-700 uppercase leading-tight truncate pr-2">
-          {{ item.name }}
-        </div>
-        <div class="text-[10px] font-bold text-slate-400 mt-1">
-          {{ formatRupiah(item.price_sell) }} <span class="mx-1 opacity-30">×</span> {{ item.qty }}
-        </div>
-      </div>
-      
-      <div class="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shrink-0">
-        <button @click="cart.updateQty(item.cartId, -1)" class="w-8 h-8 flex items-center justify-center rounded-lg text-red-500 font-black active:bg-red-50">-</button>
-        <span class="text-[12px] font-black text-slate-700 min-w-6 text-center">{{ item.qty }}</span>
-        <button @click="cart.updateQty(item.cartId, 1)" class="w-8 h-8 flex items-center justify-center rounded-lg text-blue-600 font-black active:bg-blue-50">+</button>
-      </div>
-    </div>
-
-    <div v-if="item.extraCharge > 0" class="flex justify-between items-center bg-blue-50/50 p-3 rounded-2xl border border-blue-100/50">
-      <div class="flex items-center gap-2">
-        <i class="ri-fire-fill text-orange-500 text-xs"></i>
-        <div class="flex flex-col">
-          <span class="text-[9px] font-black text-blue-800 uppercase tracking-tighter">{{ item.extraChargeName }}</span>
-          <span class="text-[9px] font-bold text-blue-400 uppercase tracking-tighter">
-            {{ formatRupiah(item.extraCharge) }} × {{ item.extraChargeQty }}
-          </span>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 shrink-0">
-        <button @click="cart.updateExtraQty(item.cartId, -1)" class="w-7 h-7 flex items-center justify-center text-orange-500 font-black bg-white border border-blue-100 rounded-lg">-</button>
-        <span class="text-[11px] font-black text-slate-700 min-w-4.5 text-center">{{ item.extraChargeQty }}</span>
-        <button @click="cart.updateExtraQty(item.cartId, 1)" class="w-7 h-7 flex items-center justify-center text-blue-600 font-black bg-white border border-blue-100 rounded-lg">+</button>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { useCartStore } from "../../../stores/cart";
-import { formatRupiah } from "../../../utils/formatters";
-import type { CartItem } from "../../../types";
-
-defineProps<{ item: CartItem }>();
-const cart = useCartStore();
-</script>
-
-
-
-src/components/pages/penjualan/CartList.vue:
-<template>
-  <div class="flex-1 flex flex-col min-h-0 bg-white mx-4 mt-2 rounded-t-[2.5rem] border-x border-t border-slate-100 shadow-sm relative overflow-hidden">
-    <div ref="scrollContainer" class="flex-1 overflow-y-auto no-scrollbar px-4 pt-4 pb-20">
-      
-      <div v-if="cart.items.length === 0" class="h-full flex flex-col items-center justify-center text-slate-300 py-20">
-        <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4 border border-slate-100">
-          <i class="ri-shopping-basket-line text-3xl opacity-20"></i>
-        </div>
-        <p class="text-[10px] font-black uppercase tracking-[0.3em] opacity-40 italic">Belum ada barang</p>
-      </div>
-
-      <div v-else class="flex flex-col gap-3">
-        <CartItem v-for="item in cart.items" :key="item.cartId" :item="item" />
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { useCartStore } from "../../../stores/cart";
-import { useAutoScroll } from "../../../composables/useAutoScroll";
-import CartItem from "./CartItem.vue";
-
-const cart = useCartStore();
-useAutoScroll(() => cart.items);
-</script>
-
-
-
-src/components/pages/penjualan/PaymentPanel.vue:
-<template>
-  <div class="p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-[0_-15px_30px_rgba(0,0,0,0.08)] rounded-t-4xl shrink-0 z-50">
-    
-    <transition name="slide-up">
-      <div v-if="cart.payMethod === 'Tunai'" class="mb-4">
-        <div class="bg-gray-900 p-5 rounded-3xl shadow-2xl relative">
-          <div class="flex items-center gap-4 mb-4 relative z-10">
-            <div class="flex-1">
-              <label class="text-[9px] text-gray-500 font-black uppercase block mb-1 tracking-widest">Input Tunai</label>
-              <div class="flex items-baseline gap-1">
-                <span class="text-blue-500 text-sm font-black italic">Rp</span>
-                <input 
-                  type="number" inputmode="numeric" v-model.number="cart.cashAmount" 
-                  class="w-full bg-transparent border-none text-white text-3xl font-black outline-none p-0 m-0"
-                  placeholder="0"
-                >
-              </div>
-            </div>
-            <div class="text-right border-l border-white/10 pl-4">
-              <div class="text-[9px] text-gray-500 font-black uppercase mb-1 tracking-widest">Kembali</div>
-              <div :class="cart.kembalian > 0 ? 'text-green-400' : 'text-white'" class="text-xl font-black italic">
-                {{ formatNumber(cart.kembalian) }}
-              </div>
-            </div>
-          </div>
-          
-          <button 
-            @click="handleMainButtonClick"
-            :disabled="isButtonDisabled"
-            class="w-full border-none py-4 rounded-2xl bg-blue-600 text-white font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all shadow-lg shadow-blue-900/20 disabled:opacity-50 disabled:scale-100"
-          >
-            {{ buttonLabel }}
-          </button>
-        </div>
-      </div>
-    </transition>
-
-    <div class="flex flex-col gap-3">
-      <div class="flex items-end justify-between px-2">
-        <span class="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Total Tagihan</span>
-        <span class="text-3xl font-black text-gray-900 tracking-tighter">{{ formatRupiah(cart.totalBelanja) }}</span>
-      </div>
-      
-      <div class="flex gap-2 bg-gray-100 p-1.5 rounded-[1.2rem] border border-gray-200 shadow-inner">
-        <button 
-        v-for="m in PAYMENT_METHODS" :key="m.id"
-        @click="cart.payMethod = (cart.payMethod === m.id ? null : m.id)"
-        :class="cart.payMethod === m.id 
-        ? 'bg-blue-600 text-white shadow-md border-blue-600' 
-        : 'bg-blue-100 text-black border-gray-200'"
-        class="flex-1 py-3 rounded-2xl border text-[10px] font-black uppercase transition-all tracking-widest flex items-center justify-center"
-      >
-        {{ m.label }}
-        </button>
-      </div>
-
-      <transition name="fade">
-        <button 
-          v-if="cart.payMethod && cart.payMethod !== 'Tunai'"
-          @click="$emit('checkout')"
-          :disabled="cart.items.length === 0"
-          class="w-full border-none py-4 rounded-[1.2rem] bg-gray-900 text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-xl active:scale-95 transition-all"
-        >
-          PROSES {{ cart.payMethod.toUpperCase() }}
-        </button>
-      </transition>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { computed } from 'vue';
-import { useCartStore } from "../../../stores/cart";
-import { formatRupiah, formatNumber } from "../../../utils/formatters";
-import { PAYMENT_METHODS } from "../../../constants/app";
-
-const emit = defineEmits(['checkout']);
-const cart = useCartStore();
-
-// Logika Label Tombol
-const buttonLabel = computed(() => {
-  if (!cart.cashAmount || cart.cashAmount === 0) return 'UANG PAS';
-  if (cart.cashAmount < cart.totalBelanja) return 'UANG KURANG';
-  return 'SELESAIKAN TRANSAKSI';
-});
-
-// Logika Disable Tombol
-const isButtonDisabled = computed(() => 
-  cart.items.length === 0 || (cart.cashAmount > 0 && cart.cashAmount < cart.totalBelanja)
-);
-
-const handleMainButtonClick = () => {
-  if (!cart.cashAmount || cart.cashAmount === 0) {
-    cart.cashAmount = cart.totalBelanja;
-  }
-  emit('checkout');
-};
-</script>
-
-<style scoped>
-.slide-up-enter-active, .slide-up-leave-active {
-  transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
-}
-.slide-up-enter-from, .slide-up-leave-to {
-  transform: translateY(20px);
-  opacity: 0;
-}
-
-.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
-</style>
-
-
-
-src/components/pages/penjualan/Penjualan.vue:
-<template>
-  <div class="flex flex-col h-[calc(100vh-110px)] relative overflow-hidden bg-slate-50">
-    <CartHeader :listJasa="listJasa" />
-    <CartList />
-    <PaymentPanel @checkout="handleCheckout" />
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, onMounted } from 'vue';
-import { useCartStore } from "../../../stores/cart";
-import { db } from "../../../database";
-import CartHeader from "./CartHeader.vue";
-import CartList from "./CartList.vue";
-import PaymentPanel from "./PaymentPanel.vue";
-import type { ServiceItem } from "../../../types";
-
-const cart = useCartStore();
-const listJasa = ref<ServiceItem[]>([]);
-
-onMounted(async () => {
-  listJasa.value = await db.table('services').toArray();
-});
-
-const handleCheckout = async () => {
-  if (cart.items.length === 0) return;
-  try {
-    const trxId = await cart.processCheckout();
-    console.log("✅ Berhasil:", trxId);
-  } catch (err) {
-    alert("Maaf, gagal menyimpan transaksi.");
-  }
-};
-</script>
-
-
+src/components/pages/
 
 src/composables/useAutoScroll.ts:
-// src/composables/useAutoScroll.ts
 import { ref, nextTick, watch, type Ref } from 'vue';
 
 // Kita izinkan input berupa Ref atau Fungsi (Getter)
@@ -1423,7 +716,6 @@ export function useAutoScroll(dataToWatch: Ref<any> | (() => any)) {
 
 
 src/composables/useProductSearch.ts:
-// src/composables/useProductSearch.ts
 import { ref } from 'vue';
 import { db } from '../database';
 
@@ -1483,7 +775,6 @@ export function useProductSearch() {
 
 
 src/composables/useScanner.ts:
-// src/composables/useScanner.ts
 import { ref, onBeforeUnmount } from 'vue';
 import { Html5Qrcode } from "html5-qrcode";
 
@@ -1518,8 +809,8 @@ export function useScanner() {
 
       const config = { 
         fps: 10, 
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0 
+        qrbox: { width: 350, height: 200 },
+        aspectRatio: 1.333333
       };
 
       await html5QrCode.start(
@@ -1552,8 +843,6 @@ export function useScanner() {
 
 
 src/constants/app.ts:
-// src/constants/app.ts
-
 export const APP_NAME = 'Sinar Pagi POS';
 
 export const CATEGORIES_WITH_SERVICE = ['Minyak', 'Kurma', 'Madu', 'Kitab'];
@@ -1579,7 +868,6 @@ export const SCANNER_CONFIG = {
 
 
 src/constants/menu.ts:
-// src/constants/menu.ts
 export const MENU_GROUPS = [
   { 
     items: [
@@ -1620,7 +908,6 @@ export const MENU_GROUPS = [
 
 
 src/database/index.ts:
-// src/database/index.ts
 import Dexie, { type Table } from 'dexie';
 import { DEXIE_SCHEMA } from './schema';
 
@@ -1690,8 +977,6 @@ export const generateUID = () => {
 
 
 src/database/schema.ts:
-// src/database/schema.ts
-
 // Daftar semua tabel yang ada di Dexie SinarPagiDB
 export const DB_TABLES = [
   'products',
@@ -1720,51 +1005,6 @@ export const DEXIE_SCHEMA = {
   services: '++id, name',
   settings: 'id, storeName'
 };
-
-
-
-src/main.ts:
-import { createApp } from 'vue'
-import { createPinia } from 'pinia'
-import './style.css' 
-import 'remixicon/fonts/remixicon.css'
-import App from './App.vue'
-import router from './router'
-import { auth } from './api/firebase' // Import auth dari file tadi
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-import { setupSyncHooks, startPullSync } from './api/sync'
-import { db } from './database'
-
-const app = createApp(App)
-const pinia = createPinia()
-app.use(pinia)
-app.use(router)
-
-// Fungsi untuk memulai aplikasi setelah Login & DB siap
-const initApp = () => {
-  db.open().then(() => {
-    console.log("✅ Database SinarPagiDB Aktif");
-    app.mount('#app');
-  });
-};
-
-// Pantau status Login
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log("🔐 User terautentikasi:", user.email);
-    setupSyncHooks();
-    startPullSync(); // Jalankan sync hanya SETELAH login
-    initApp();
-  } else {
-    console.log("🔓 Belum login, mencoba login otomatis...");
-    // Ganti email & password dengan akun Firebase kamu yang asli
-    signInWithEmailAndPassword(auth, "hudzshop@gmail.com", "07NovembeR21")
-      .catch(err => {
-        console.error("❌ Login Gagal:", err.message);
-        initApp(); // Tetap jalankan app meski login gagal (offline mode)
-      });
-  }
-});
 
 
 
@@ -1810,7 +1050,6 @@ export default router
 
 
 src/stores/cart.ts:
-// src/stores/cart.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { db, generateUID } from '../database';
@@ -1969,49 +1208,7 @@ export const useCartStore = defineStore('cart', () => {
 
 
 
-src/style.css:
-@import "tailwindcss";
-
-:root {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #f3f4f6; /* Gray-100 agar senada dengan MainLayout */
-}
-
-/* Reset dasar agar aplikasi penuh se-layar */
-html, body, #app {
-  height: 100%;
-  margin: 0;
-  padding: 0;
-  width: 100%;
-}
-
-body {
-  overflow: hidden; /* Mencegah scroll double karena kita pakai scroll di dalam card */
-}
-
-/* Custom Scrollbar minimalis untuk area daftar produk/keranjang */
-::-webkit-scrollbar {
-  width: 5px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #e5e7eb;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #d1d5db;
-}
-
-
-
 src/types/index.ts:
-// src/types/index.ts
-
 export interface Product {
   id: string;
   image: string | null;
@@ -2069,7 +1266,6 @@ export interface Member {
 
 
 src/utils/calculators.ts:
-// src/utils/calculators.ts
 import type { CartItem } from '../types';
 
 export const calculateCartTotal = (items: CartItem[]): number => {
@@ -2087,11 +1283,6 @@ export const calculateChange = (cash: number, total: number): number => {
 
 
 src/utils/formatters.ts:
-// src/utils/formatters.ts
-
-/**
- * Format angka ke Rupiah (Rp 10.000)
- */
 export const formatRupiah = (val: number): string => {
   return new Intl.NumberFormat('id-ID', { 
     style: 'currency', 
@@ -2164,8 +1355,9 @@ import { useRoute } from 'vue-router';
 
 // IMPORT HALAMAN YANG SUDAH MIGRASI
 import Penjualan from '../components/pages/penjualan/Penjualan.vue';
-import DaftarProduk from '../components/pages/daftar-produk/DaftarProduk.vue'; 
-import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue'; // Baru ditambahkan
+import DaftarProduk from '../components/pages/daftar-produk/DaftarProduk.vue';
+import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue';
+import TambahProduk from '../components/pages/tambah-produk/TambahProduk.vue';
 
 const route = useRoute();
 
@@ -2173,7 +1365,8 @@ const route = useRoute();
 const componentsMap: Record<string, any> = {
   'Penjualan': markRaw(Penjualan),
   'Daftar Produk': markRaw(DaftarProduk),
-  'Kategori Produk': markRaw(KategoriProduk), // Sinkronkan dengan router
+  'Kategori Produk': markRaw(KategoriProduk),
+  'Tambah Produk': markRaw(TambahProduk), // Sinkronkan dengan router
 };
 
 const title = computed(() => (route.name as string) || 'Halaman');
@@ -2190,3 +1383,31 @@ const activeComponent = computed(() => componentsMap[route.name as string]);
   animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 </style>
+
+
+
+src/App.vue: 1-12
+src/main.ts: 15-56
+src/style.css: 58-94
+src/api/firebase.ts: 98-114
+src/api/sync.ts: 119-213
+src/common/BaseButton.vue: 217-268
+src/components/layout/AppHeader.vue: 272-362
+src/components/layout/GlobalSearch.vue: 366-385
+src/components/layout/MainLayout.vue: 389-558
+src/components/layout/ScannerOverlay.vue: 562-613
+src/components/layout/Sidebar.vue: 617-681
+src/components/pages/ 
+src/composables/useAutoScroll.ts: 687-714
+src/composables/useProductSearch.ts: 718-773
+src/composables/useScanner.ts: 777-841
+src/constants/app.ts: 845-866
+src/constants/menu.ts: 870-906
+src/database/index.ts: 910-975
+src/database/schema.ts: 979-1007
+src/router/index.ts: 1011-1048
+src/stores/cart.ts: 1052-1207
+src/types/index.ts: 1211-1264
+src/utils/calculators.ts: 1268-1281
+src/utils/formatters.ts: 1285-1317
+src/views/PageView.vue: 1321-1385

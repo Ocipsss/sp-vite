@@ -1,4 +1,4 @@
-import type { CartItem } from '../types';
+import type { CartItem } from '@/types';
 
 export const calculateCartTotal = (items: CartItem[]): number => {
   return items.reduce((acc, item) => {

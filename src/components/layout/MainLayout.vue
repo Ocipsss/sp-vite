@@ -34,8 +34,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useCartStore } from '../../stores/cart';
-import { startPullSync } from '../../api/sync';
+import { useCartStore } from '@/stores/cart';
+import { startPullSync } from '@/api/sync';
 
 import Sidebar from './Sidebar.vue';
 import AppHeader from './AppHeader.vue';
