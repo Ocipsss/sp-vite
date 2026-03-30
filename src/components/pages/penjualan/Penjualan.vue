@@ -24,11 +24,18 @@ onMounted(async () => {
 
 const handleCheckout = async () => {
   if (cart.items.length === 0) return;
+
+  if (!cart.cashAmount || cart.cashAmount === 0) {
+    cart.cashAmount = cart.totalBelanja;
+  }
+
   try {
     const trxId = await cart.processCheckout();
     console.log("✅ Berhasil:", trxId);
+    alert("Transaksi Berhasil!");
   } catch (err) {
     alert("Maaf, gagal menyimpan transaksi.");
   }
 };
+
 </script>
