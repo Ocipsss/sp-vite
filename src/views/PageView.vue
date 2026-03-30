@@ -37,6 +37,7 @@ import Penjualan from '../components/pages/penjualan/Penjualan.vue';
 import DaftarProduk from '../components/pages/daftar-produk/DaftarProduk.vue';
 import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue';
 import TambahProduk from '../components/pages/tambah-produk/TambahProduk.vue';
+import RiwayatTransaksi from '../components/pages/riwayat-transaksi/RiwayatTransaksi.vue';
 
 const route = useRoute();
 
@@ -45,7 +46,9 @@ const componentsMap: Record<string, any> = {
   'Penjualan': markRaw(Penjualan),
   'Daftar Produk': markRaw(DaftarProduk),
   'Kategori Produk': markRaw(KategoriProduk),
-  'Tambah Produk': markRaw(TambahProduk), // Sinkronkan dengan router
+  'Tambah Produk': markRaw(TambahProduk),
+  'Riwayat Transaksi': markRaw(RiwayatTransaksi),
+  // Sinkronkan dengan router
 };
 
 const title = computed(() => (route.name as string) || 'Halaman');
