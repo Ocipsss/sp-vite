@@ -1,5 +1,6 @@
 <template>
-  <div class="p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-[0_-15px_30px_rgba(0,0,0,0.08)] rounded-t-4xl shrink-0 z-50">
+  <div class="fixed bottom-0 left-0 right-0 p-4 pb-[env(safe-area-inset-bottom,1rem)] bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-[0_-15px-30px_rgba(0,0,0,0.08)] rounded-t-[2.5rem] z-50 flex flex-col min-h-[200px]">
+
     
     <transition name="slide-up">
       <div v-if="cart.payMethod === 'Tunai'" class="mb-4">
