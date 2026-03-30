@@ -1,5 +1,9 @@
 <template>
-  <div class="fixed bottom-0 left-0 right-0 p-4 pb-[env(safe-area-inset-bottom,1rem)] bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-[0_-15px-30px_rgba(0,0,0,0.08)] rounded-t-[2.5rem] z-50 flex flex-col min-h-[200px]">
+  <div 
+  class="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-lg border-t border-gray-100 shadow-[0_-15px_30px_rgba(0,0,0,0.08)] rounded-t-[2.5rem] z-50 flex flex-col gap-3"
+  style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);"
+>
+
 
     
     <transition name="slide-up">
