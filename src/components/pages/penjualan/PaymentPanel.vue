@@ -97,11 +97,11 @@ const isButtonDisabled = computed(() =>
 const handleMainButtonClick = () => {
   if (!cart.cashAmount || cart.cashAmount === 0) {
     cart.cashAmount = cart.totalBelanja;
+    if (navigator.vibrate) navigator.vibrate(10);
     return; 
   }
   emit('checkout');
 };
-
 </script>
 
 <style scoped>
