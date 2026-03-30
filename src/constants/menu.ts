@@ -1,4 +1,3 @@
-// src/constants/menu.ts
 export const MENU_GROUPS = [
   { 
     items: [

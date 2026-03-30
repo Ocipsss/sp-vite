@@ -1,8 +1,3 @@
-// src/utils/formatters.ts
-
-/**
- * Format angka ke Rupiah (Rp 10.000)
- */
 export const formatRupiah = (val: number): string => {
   return new Intl.NumberFormat('id-ID', { 
     style: 'currency', 

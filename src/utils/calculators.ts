@@ -1,4 +1,3 @@
-// src/utils/calculators.ts
 import type { CartItem } from '../types';
 
 export const calculateCartTotal = (items: CartItem[]): number => {

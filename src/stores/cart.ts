@@ -1,4 +1,3 @@
-// src/stores/cart.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { db, generateUID } from '../database';

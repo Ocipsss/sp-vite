@@ -1,5 +1,3 @@
-// src/constants/app.ts
-
 export const APP_NAME = 'Sinar Pagi POS';
 
 export const CATEGORIES_WITH_SERVICE = ['Minyak', 'Kurma', 'Madu', 'Kitab'];

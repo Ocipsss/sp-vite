@@ -1,4 +1,3 @@
-// src/composables/useProductSearch.ts
 import { ref } from 'vue';
 import { db } from '../database';
 

@@ -1,5 +1,3 @@
-// src/database/schema.ts
-
 // Daftar semua tabel yang ada di Dexie SinarPagiDB
 export const DB_TABLES = [
   'products',

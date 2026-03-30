@@ -1,4 +1,3 @@
-// src/api/sync.ts
 import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
 import { fdb } from "./firebase";
 import { db } from "../database";

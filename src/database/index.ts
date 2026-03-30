@@ -1,4 +1,3 @@
-// src/database/index.ts
 import Dexie, { type Table } from 'dexie';
 import { DEXIE_SCHEMA } from './schema';
 

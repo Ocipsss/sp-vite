@@ -1,4 +1,3 @@
-// src/composables/useAutoScroll.ts
 import { ref, nextTick, watch, type Ref } from 'vue';
 
 // Kita izinkan input berupa Ref atau Fungsi (Getter)

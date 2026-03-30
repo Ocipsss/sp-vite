@@ -1,4 +1,3 @@
-// src/composables/useScanner.ts
 import { ref, onBeforeUnmount } from 'vue';
 import { Html5Qrcode } from "html5-qrcode";
 
