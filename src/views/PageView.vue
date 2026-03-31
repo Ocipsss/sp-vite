@@ -38,6 +38,9 @@ import DaftarProduk from '../components/pages/daftar-produk/DaftarProduk.vue';
 import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue';
 import TambahProduk from '../components/pages/tambah-produk/TambahProduk.vue';
 import RiwayatTransaksi from '../components/pages/riwayat-transaksi/RiwayatTransaksi.vue';
+import Dashboard from '../components/pages/dashboard/Dashboard.vue';
+import StockMonitor from '../components/pages/stock-monitor/StockMonitor.vue';
+
 
 const route = useRoute();
 
@@ -48,6 +51,8 @@ const componentsMap: Record<string, any> = {
   'Kategori Produk': markRaw(KategoriProduk),
   'Tambah Produk': markRaw(TambahProduk),
   'Riwayat Transaksi': markRaw(RiwayatTransaksi),
+  'Dashboard' : markRaw(Dashboard),
+  'Stock Monitor' : markRaw(StockMonitor),
   // Sinkronkan dengan router
 };
 
