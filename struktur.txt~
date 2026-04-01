@@ -1,5 +1,6 @@
 .
 ├── README.md
+├── file.txt
 ├── index.html
 ├── package-lock.json
 ├── package.json
@@ -30,14 +31,31 @@
 │   │       │   ├── ProductDetailModal.vue
 │   │       │   ├── ProductEditModal.vue
 │   │       │   └── ProductItem.vue
+│   │       ├── dashboard
+│   │       │   ├── Dashboard.vue
+│   │       │   └── useDashboard.ts
 │   │       ├── kategori
 │   │       │   └── KategoriProduk.vue
-│   │       └── penjualan
-│   │           ├── CartHeader.vue
-│   │           ├── CartItem.vue
-│   │           ├── CartList.vue
-│   │           ├── PaymentPanel.vue
-│   │           └── Penjualan.vue
+│   │       ├── layanan-digital
+│   │       │   ├── LayananDigital.vue
+│   │       │   └── useDigitalService.ts
+│   │       ├── penjualan
+│   │       │   ├── CartHeader.vue
+│   │       │   ├── CartItem.vue
+│   │       │   ├── CartList.vue
+│   │       │   ├── PaymentPanel.vue
+│   │       │   └── Penjualan.vue
+│   │       ├── riwayat-transaksi
+│   │       │   ├── RiwayatTransaksi.vue
+│   │       │   └── TransactionItem.vue
+│   │       ├── stock-monitor
+│   │       │   └── StockMonitor.vue
+│   │       └── tambah-produk
+│   │           ├── PhotoUploader.vue
+│   │           ├── PriceInput.vue
+│   │           ├── TambahProduk.vue
+│   │           ├── WholesaleCalculator.vue
+│   │           └── useProductForm.ts
 │   ├── composables
 │   │   ├── useAutoScroll.ts
 │   │   ├── useProductSearch.ts
@@ -61,11 +79,11 @@
 │   │   └── formatters.ts
 │   └── views
 │       └── PageView.vue
-├── struktur.txt
+├── struktur.txt~
 ├── tailwind.config.ts
 ├── tsconfig.app.json
 ├── tsconfig.json
 ├── tsconfig.node.json
 └── vite.config.ts
 
-20 directories, 49 files
+25 directories, 62 files
