@@ -110,3 +110,22 @@ onUnmounted(() => {
   window.removeEventListener('open-product-detail', handleOpenDetailEvent as EventListener);
 });
 </script>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen DaftarProduk.vue yang berfungsi sebagai pusat manajemen inventaris dalam aplikasi Sinar Pagi POS. Komponen ini menangani alur kerja lengkap (CRUD) untuk produk, mulai dari menampilkan daftar barang yang bisa difilter secara real-time, melihat detail spesifikasi barang, hingga melakukan perubahan data atau penghapusan. Desainnya dioptimalkan untuk penggunaan mobile dengan sistem modal (pop-up) yang bertumpuk, memastikan kasir dapat mengelola stok barang dengan cepat tanpa harus berpindah-pindah halaman secara manual.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-17: Area Template Utama; menggunakan elemen ProductItem yang diulang (v-for) untuk menampilkan setiap barang dalam koleksi data. Terdapat juga logika tampilan cadangan jika hasil pencarian kosong (Empty State).
+Baris 19-25: Komponen ProductDetailModal; pop-up yang muncul saat sebuah produk diklik untuk menampilkan informasi lengkap, serta menyediakan tombol aksi untuk edit atau hapus.
+Baris 27-33: Komponen ProductEditModal; formulir pop-up untuk mengubah informasi produk seperti nama, harga, atau stok, yang terhubung langsung dengan daftar kategori yang ada.
+Baris 37-43: Mengimpor fungsi reaktivitas Vue, koneksi database Dexie, state management Pinia (untuk fitur pencarian), serta komponen-komponen pendukung lainnya.
+Baris 45-51: Inisialisasi State; menyiapkan variabel reaktif untuk menampung daftar produk, daftar kategori, serta mengontrol status buka/tutup jendela modal detail dan edit.
+Baris 54-60: Computed filteredProducts; jantung dari fitur pencarian. Fungsi ini secara otomatis menyaring daftar produk berdasarkan nama atau barcode (code) sesuai dengan apa yang diketikkan kasir di kolom pencarian global.
+Baris 62-65: Fungsi loadData; mengambil data produk terbaru dari database lokal dan mengurutkannya berdasarkan nama secara alfabetis agar daftar terlihat rapi.
+Baris 67-76: Fungsi openDetail & openEdit; mengatur alur perpindahan antar modal. Saat beralih ke mode edit, modal detail akan ditutup secara otomatis untuk menjaga fokus pengguna.
+Baris 78-89: Fungsi handleUpdate; menyimpan perubahan data ke database lokal menggunakan perintah .put, memperbarui stempel waktu (updatedAt), lalu menyegarkan tampilan daftar produk.
+Baris 91-97: Fungsi handleDelete; memberikan konfirmasi keamanan sebelum menghapus data produk secara permanen dari penyimpanan perangkat.
+Baris 100-103: Fungsi handleOpenDetailEvent; sebuah "Event Listener" kustom yang memungkinkan komponen lain (seperti hasil scan barcode) untuk memerintahkan halaman ini membuka detail produk tertentu secara otomatis.
+Baris 105-112: Lifecycle Hooks (onMounted & onUnmounted); menjalankan pengambilan data saat halaman dibuka dan membersihkan pendengar event saat halaman ditinggalkan untuk mencegah kebocoran memori (memory leak). -->

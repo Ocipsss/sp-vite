@@ -70,3 +70,19 @@ const handlePackSize = (e: any) => {
   emit('updatePrice', 'pack_price', props.product.pack_price);
 };
 </script>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen WholesaleCalculator.vue yang berfungsi sebagai Fitur Pembagi Harga Grosir untuk aplikasi Sinar Pagi POS. Komponen ini dirancang untuk mempermudah kasir dalam menentukan "Harga Modal per Biji" (pcs) ketika barang dibeli dalam jumlah besar (seperti 1 dus atau 1 pak). Dengan memasukkan total harga satu dus dan jumlah isi di dalamnya, sistem akan secara otomatis melakukan pembagian matematika di latar belakang dan mengisi kolom harga modal secara akurat, sehingga meminimalisir kesalahan hitung manual yang berisiko merugikan toko.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-3: Kontainer Visual; menggunakan latar belakang biru transparan (bg-blue-50/50) dan garis tepi lembut untuk memisahkan area kalkulator ini dari formulir utama, memberikan kesan sebagai fitur "asisten tambahan".
+Baris 4-10: Header Kalkulator; menampilkan judul "Kalkulator Grosir" dengan ikon kalkulator (ri-calculator-line) sebagai petunjuk fungsi bagi pengguna.
+Baris 12-25: Input Harga Grosir; kolom tempat kasir memasukkan total harga beli untuk 1 dus atau pak. Menggunakan 'displayPack' untuk menampilkan format titik ribuan agar angka mudah dibaca saat diketik.
+Baris 27-40: Input Jumlah Isi; kolom untuk menentukan berapa banyak barang (pcs) yang ada di dalam satu dus tersebut. Di sebelah kanan kolom terdapat label unit produk (misal: 'pcs') yang diambil secara dinamis dari data produk.
+Baris 44: Script Setup; mendefinisikan 'props' untuk menerima data produk dari induknya dan 'emit' untuk mengirimkan sinyal perubahan harga kembali ke formulir utama.
+Baris 48-55: Fungsi selectAll; sebuah fitur kenyamanan (UX) yang sangat penting di HP. Saat kasir menyentuh kolom, seluruh teks akan otomatis terblokir (tersorot), sehingga mereka bisa langsung mengetik angka baru tanpa harus menghapus angka lama satu per satu.
+Baris 57-60: Fungsi handlePackPrice; setiap kali kasir mengetik harga dus, fungsi ini membersihkan karakter non-angka (seperti titik) dan mengirimkan nilai murni (integer) ke komponen induk untuk diproses.
+Baris 62-68: Fungsi handlePackSize; memperbarui jumlah isi barang di dalam objek produk secara langsung. Setelah jumlah isi berubah, fungsi ini memicu ('emit') kalkulasi ulang harga modal per satuan di komponen pusat (useProductForm).
+Baris 20 & 35: Atribut Mobile-Friendly; penggunaan 'inputmode="numeric"' dan 'pattern="[0-9]*"' memastikan bahwa hanya papan ketik angka (numpad) yang muncul di perangkat Android atau iOS, mempercepat proses entri data. -->

@@ -34,3 +34,18 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #d1d5db;
 }
+
+
+
+/* DESKRIPSI KESELURUHAN FILE:
+File ini adalah style.css yang berfungsi sebagai Pusat Pengaturan Visual (Global Stylesheet) untuk seluruh aplikasi Sinar Pagi POS. File ini menggabungkan kekuatan framework Tailwind CSS dengan pengaturan kustom untuk memastikan aplikasi memiliki tampilan yang konsisten, bersih, dan optimal saat digunakan di perangkat mobile maupun tablet. Fokus utamanya adalah mengatur tipografi (font), warna dasar aplikasi, serta menghilangkan elemen visual yang mengganggu (seperti scrollbar bawaan browser yang tebal) agar antarmuka kasir terlihat seperti aplikasi native profesional.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1: Perintah @import "tailwindcss"; mengaktifkan seluruh sistem desain Tailwind CSS agar semua class utilitas (seperti flex, bg-white, dll) dapat digunakan di setiap komponen Vue.
+Baris 3-6: Pengaturan variabel root (:root); menetapkan font 'Inter' sebagai standar tulisan aplikasi agar teks mudah dibaca oleh kasir, serta memberikan warna latar belakang abu-abu muda (#f3f4f6) agar senada dengan desain MainLayout.
+Baris 9-14: Reset Dasar (Global Reset); memaksa elemen HTML, Body, dan kontainer utama (#app) untuk selalu mengisi 100% tinggi dan lebar layar. Ini penting agar tidak ada celah kosong di pinggir layar perangkat.
+Baris 16-18: Properti 'overflow: hidden' pada body; teknik untuk mengunci layar utama agar tidak bisa digeser secara keseluruhan. Hal ini dilakukan karena navigasi gulir (scroll) sudah diatur secara mandiri di dalam area keranjang belanja dan daftar produk.
+Baris 21-23: Custom Scrollbar; bagian ini mulai mengatur lebar batang penggulung (scrollbar) menjadi sangat tipis (5px) agar tidak memakan ruang di layar yang kecil.
+Baris 25-27: Track Scrollbar; mengatur jalur lintasan scrollbar menjadi transparan agar tidak terlihat mencolok dan merusak estetika desain putih bersih aplikasi.
+Baris 29-32: Thumb Scrollbar; memberikan warna abu-abu lembut (#e5e7eb) dan bentuk melengkung (rounded) pada batang yang digeser oleh jari kasir, memberikan kesan modern dan minimalis.
+Baris 34-36: Efek Hover; memberikan perubahan warna sedikit lebih gelap pada batang scroll saat disentuh atau diarahkan kursor sebagai umpan balik visual (feedback) bagi pengguna. */

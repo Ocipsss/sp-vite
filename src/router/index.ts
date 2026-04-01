@@ -35,3 +35,20 @@ const router = createRouter({
 })
 
 export default router
+
+
+
+// DESKRIPSI KESELURUHAN FILE:
+// File ini adalah Konfigurasi Routing (Vue Router) yang berfungsi sebagai pengatur lalu lintas navigasi di aplikasi Sinar Pagi POS. File ini mendefinisikan hubungan antara alamat URL (path), nama halaman, dan komponen visual yang harus ditampilkan. Setiap rute dilengkapi dengan data tambahan (meta) seperti ikon dan izin akses kamera (scanner), sehingga header atau sidebar dapat menyesuaikan tampilannya secara otomatis berdasarkan halaman yang sedang dibuka oleh kasir.
+
+// PENJELASAN FUNGSI TIAP BARIS:
+// Baris 1-2: Mengimpor fungsi createRouter dan createWebHistory dari library Vue Router, serta mengimpor PageView sebagai komponen tunggal yang akan merender konten halaman.
+// Baris 4: Definisi array 'routes' yang menampung seluruh daftar alamat halaman aplikasi Sinar Pagi.
+// Baris 6-8: Grup Navigasi Utama; mengatur rute untuk Dashboard (Halaman Utama), Kasir (Penjualan), dan Layanan Digital.
+// Baris 7: Properti 'showScanner: true' pada rute Penjualan; menandakan bahwa tombol scanner barcode harus ditampilkan secara otomatis di header saat berada di halaman ini.
+// Baris 11-14: Grup Riwayat & Stok; mengatur rute untuk memantau transaksi masa lalu, monitor stok barang, pengelolaan piutang pelanggan, dan pencatatan biaya operasional (Pengeluaran).
+// Baris 17-23: Grup Manajemen Data; berisi rute-rute teknis untuk mengelola database produk, kategori, harga grosir (paket), serta data member dan akun kasir.
+// Baris 17: Properti 'showScanner: true' pada Daftar Produk; memungkinkan kasir mencari detail barang hanya dengan memindai barcode langsung dari daftar produk.
+// Baris 26-29: Grup Laporan & Sistem; mengatur rute untuk melihat analisis keuntungan (Laba Rugi), arus kas, laporan harian, serta konfigurasi pengaturan aplikasi.
+// Baris 32-35: Inisialisasi instance router; menggunakan mode 'createWebHistory' agar URL terlihat bersih tanpa simbol pagar (#) dan mendaftarkan seluruh rute yang telah dibuat.
+// Baris 38: Ekspor default router agar dapat didaftarkan pada file utama aplikasi (main.ts).

@@ -67,3 +67,25 @@ const handlePullFirebase = async () => {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
+
+
+
+<!-- 
+DESKRIPSI KESELURUHAN FILE:
+File ini adalah Layout Utama (Main Layout) atau AppShell yang membungkus seluruh aplikasi Sinar Pagi POS. File ini mengatur struktur visual tingkat atas, termasuk navigasi Sidebar, Header, dan area konten utama. Fitur paling menonjol adalah implementasi "Drawer Menu" bergaya mobile modern, di mana konten utama akan bergeser, mengecil (scale), dan melengkung (rounded) saat Sidebar dibuka, menciptakan efek kedalaman (depth) yang interaktif.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-2: Kontainer root aplikasi dengan latar belakang gelap (#0f172a) yang berfungsi sebagai kanvas di belakang saat konten utama bergeser ke samping.
+Baris 4-8: Memanggil komponen Sidebar; mengirimkan status loading sinkronisasi dan menangani event navigasi serta sinkronisasi data dari Firebase.
+Baris 10-18: Kontainer Konten Utama; menggunakan binding class dinamis untuk menciptakan animasi transisi yang halus saat Sidebar dibuka atau ditutup.
+Baris 14-17: Logika animasi; saat sidebar terbuka (isSidebarOpen), konten akan bergeser ke kanan 70%, mengecil ke skala 0.95, dan memiliki sudut melengkung 40px (rounded).
+Baris 19: Event klik pada kontainer utama; jika sidebar sedang terbuka, mengklik area konten akan otomatis menutup kembali sidebar tersebut.
+Baris 21-24: Memanggil komponen AppHeader; mengirimkan status sidebar untuk mengubah ikon menu dan menangani aksi toggle (buka/tutup) sidebar.
+Baris 26-29: Area utama (Main) yang menggunakan tag slot untuk menampilkan halaman-halaman aplikasi. Dilengkapi overlay transparan saat sidebar terbuka agar interaksi pada konten utama terkunci.
+Baris 32: Menampilkan ScannerOverlay secara global di atas semua elemen jika status isScannerOpen di dalam Pinia Store bernilai true.
+Baris 36-43: Bagian script setup; mengimpor reaktivitas Vue, router, store keranjang belanja, dan fungsi sinkronisasi database (startPullSync).
+Baris 45-48: Inisialisasi variabel reaktif (ref) untuk mengontrol status terbukanya sidebar dan status loading saat proses tarik data (pull) berlangsung.
+Baris 50-53: Fungsi navigateTo; digunakan untuk berpindah halaman secara programatik lewat router dan otomatis menutup sidebar setelah berpindah.
+Baris 55-65: Fungsi handlePullFirebase; memicu proses sinkronisasi data produk dari cloud ke database lokal dengan indikator loading (isPulling).
+Baris 68-71: CSS Scoped untuk menyembunyikan scrollbar bawaan browser agar tampilan aplikasi terlihat lebih bersih dan seperti aplikasi native mobile.
+-->

@@ -36,3 +36,18 @@ import type { Product } from "@/types";
 defineProps<{ product: Product }>();
 defineEmits(['click']);
 </script>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen ProductItem.vue yang berfungsi sebagai Kartu Tampilan Produk (Product Card) tunggal dalam daftar inventaris aplikasi Sinar Pagi POS. Komponen ini dirancang sangat ringkas dan informatif (compact UI) untuk memudahkan kasir memantau stok dan harga barang secara cepat. Keunggulan utamanya adalah adanya indikator visual otomatis yang akan berubah warna menjadi merah jika stok barang menipis, memberikan peringatan dini bagi pengelola toko untuk segera melakukan pengisian stok (restock).
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 2-5: Kontainer Utama; menggunakan layout 'flex' untuk menyusun elemen secara horizontal. Dilengkapi dengan efek 'active:scale-95' yang memberikan sensasi membal (feedback haptik visual) saat kartu ditekan oleh jari pengguna di layar sentuh.
+Baris 7-11: Area Gambar/Ikon; menampilkan foto produk jika tersedia. Jika tidak ada foto, sistem secara otomatis menampilkan ikon tas belanja (ri-shopping-bag-3-fill) dengan latar belakang biru muda yang lembut.
+Baris 13-15: Informasi Nama; menampilkan nama produk dalam format huruf besar (uppercase) dan tebal. Menggunakan class 'truncate' agar nama yang terlalu panjang tidak merusak tata letak (otomatis terpotong dengan titik-titik).
+Baris 16-22: Badge Barcode & Kategori; menyajikan kode unik barang dan label kategori dalam bentuk badge kecil berwarna abu-abu agar informasi teknis tetap terlihat tanpa mengganggu pandangan mata.
+Baris 23: Tampilan Harga; menampilkan harga jual produk dengan warna biru mencolok menggunakan format Rupiah yang sudah dibersihkan dari angka desimal.
+Baris 27-31: Indikator Stok Pintar; bagian ini menggunakan logika ':class'. Jika jumlah stok (qty) bernilai 5 atau kurang, latar belakang akan berubah menjadi merah (bg-red-50) sebagai tanda peringatan. Jika stok aman, akan berwarna abu-abu standar.
+Baris 32: Ikon Navigasi; menampilkan simbol panah ke kanan (ri-arrow-right-s-line) sebagai petunjuk visual bahwa kartu ini bisa diklik untuk melihat detail lebih lanjut.
+Baris 37-41: Bagian Script; mengimpor fungsi 'formatRupiah' untuk merapikan angka harga dan mendefinisikan 'Props' agar komponen ini bisa menerima data produk yang berbeda-beda dari halaman induk. -->

@@ -88,3 +88,26 @@ const goToPenjualan = () => {
   to { opacity: 1; transform: scale(1); }
 }
 </style>
+
+
+
+<!-- 
+DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen AppHeader yang berfungsi sebagai bilah navigasi atas (top bar) untuk aplikasi Sinar Pagi POS. Header ini bersifat dinamis; ia dapat berubah tampilan tergantung pada halaman mana pengguna berada. Fitur utamanya mencakup tombol kontrol sidebar, kolom pencarian global yang terhubung dengan state manajemen (Pinia), serta tombol navigasi pintar yang berganti fungsi antara tombol scanner barcode dan tombol keranjang belanja sesuai konteks halaman.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-2: Pembungkus utama header dengan styling Tailwind untuk tinggi tetap (h-16), latar putih, garis bawah, dan pengaturan tata letak flexbox.
+Baris 3-10: Tombol toggle sidebar yang menggunakan event @click.stop untuk mencegah bubbling dan mengubah ikon menu secara dinamis (fold/unfold) berdasarkan status sidebar.
+Baris 12-23: Area tengah header yang bersifat kondisional; menampilkan komponen GlobalSearch jika berada di halaman utama (Penjualan/Daftar Produk), atau menampilkan nama halaman saat ini jika berada di halaman lain.
+Baris 14: Menghubungkan kolom pencarian langsung ke properti searchQuery di dalam Pinia Store agar pencarian barang tersinkronisasi secara global.
+Baris 25-50: Area kanan header yang berisi logika tombol aksi pintar.
+Baris 27-41: Tombol Keranjang (Warna Hijau); muncul di halaman selain Penjualan. Menampilkan indikator angka (badge) merah jika ada barang di keranjang dan akan mengarahkan pengguna ke halaman Kasir jika diklik.
+Baris 43-49: Tombol Scanner (Warna Biru); muncul hanya di halaman Penjualan atau Daftar Produk untuk memicu fungsi kamera scanner barcode.
+Baris 54-58: Import dependensi Vue (computed), Vue Router (route/router), Pinia Store (cart), dan komponen pendukung (GlobalSearch).
+Baris 60-61: Definisi Props untuk menerima status sidebar dan Emits untuk mengirimkan aksi klik toggle ke komponen induk (App.vue).
+Baris 63-65: Inisialisasi akses ke store keranjang, informasi rute saat ini, dan fungsi navigasi router.
+Baris 68-72: Computed isNotOnMainPages; logika untuk mengecek apakah halaman aktif saat ini termasuk dalam kategori halaman utama atau bukan.
+Baris 74-76: Fungsi handleToggle yang memicu pengiriman event ke komponen induk untuk membuka/tutup sidebar.
+Baris 78-80: Fungsi goToPenjualan untuk berpindah halaman ke menu kasir (Penjualan) secara terprogram.
+Baris 83-91: Styling CSS khusus untuk memberikan animasi fade-in yang halus pada badge angka keranjang belanja saat jumlah barang bertambah.
+-->

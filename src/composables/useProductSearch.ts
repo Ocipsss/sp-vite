@@ -53,3 +53,23 @@ export function useProductSearch() {
     formatRupiah
   };
 }
+
+
+
+// DESKRIPSI KESELURUHAN FILE:
+// File ini adalah sebuah Composable kustom bernama useProductSearch yang berfungsi sebagai mesin logika (logic engine) untuk fitur pencarian produk di aplikasi Sinar Pagi POS. Komposabel ini menangani pengambilan data dari database lokal (Dexie), pengurutan hasil pencarian yang cerdas (mendahulukan kata yang cocok di depan), pemformatan mata uang Rupiah, serta fitur estetika seperti penyorotan teks (highlighting) pada hasil pencarian agar kasir lebih mudah menemukan barang yang dicari secara visual.
+
+// PENJELASAN FUNGSI TIAP BARIS:
+// Baris 1-2: Mengimpor fungsi ref untuk reaktivitas data dan instance database (db) untuk melakukan query ke penyimpanan lokal IndexedDB.
+// Baris 4: Ekspor fungsi utama useProductSearch sebagai kontainer logika pencarian yang dapat digunakan di berbagai komponen (reusable).
+// Baris 5-6: Inisialisasi variabel reaktif suggestions untuk menyimpan daftar hasil pencarian dan isFocused untuk melacak status aktif kolom input.
+// Baris 9: Definisi fungsi highlightText; digunakan untuk membungkus bagian kata yang cocok dengan query pencarian ke dalam tag HTML span dengan warna biru.
+// Baris 11-13: Logika pembersihan query; jika query kosong maka kembalikan teks asli, serta melakukan "escaping" pada karakter khusus regex agar tidak terjadi error sistem.
+// Baris 14-15: Penggunaan Regular Expression (RegExp) untuk mencari kata secara global tanpa mempedulikan huruf besar/kecil (case-insensitive) dan menggantinya dengan gaya teks tebal.
+// Baris 19: Definisi fungsi asinkron fetchSuggestions; jantung dari logika pencarian barang di database Sinar Pagi.
+// Baris 20-23: Validasi input; jika kotak pencarian kosong atau hanya satu karakter, maka daftar saran langsung dikosongkan untuk menghemat performa.
+// Baris 27-29: Melakukan query ke tabel 'products' menggunakan filter IndexedDB untuk mencari semua produk yang namanya mengandung kata kunci pencarian.
+// Baris 31-38: Logika Pengurutan Pintar (Sorting); hasil pencarian diurutkan sedemikian rupa sehingga produk yang namanya "Dimulai Dengan" kata kunci akan muncul paling atas.
+// Baris 39: Menggunakan .slice(0, 8) untuk membatasi hasil pencarian hanya maksimal 8 item agar tampilan dropdown tetap ringkas dan cepat.
+// Baris 42-46: Fungsi formatRupiah; menggunakan API Intl.NumberFormat bawaan browser untuk mengubah angka mentah menjadi format mata uang Rupiah (IDR) yang rapi.
+// Baris 48-54: Mengembalikan (return) seluruh variabel dan fungsi agar bisa diimpor dan digunakan oleh komponen UI seperti GlobalSearch.vue.

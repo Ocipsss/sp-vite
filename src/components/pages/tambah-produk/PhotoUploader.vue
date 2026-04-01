@@ -36,3 +36,19 @@ const handleClip = () => {
   input.click();
 };
 </script>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen ImageUpload.vue yang berfungsi sebagai Modul Kamera & Kompresi Foto untuk aplikasi Sinar Pagi POS. Komponen ini memungkinkan kasir atau admin untuk mengambil foto produk secara langsung menggunakan kamera HP atau memilih gambar dari galeri. Keunggulan utamanya adalah adanya fitur "Auto-Resizing" dan "Auto-Compression"; setiap foto yang diambil akan otomatis dipotong menjadi ukuran kotak (400x400 piksel) dan diperkecil ukuran filenya (kompresi 70%) agar tidak membebani memori HP dan mempercepat proses sinkronisasi ke cloud.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-4: Area Bingkai Foto; membuat kotak berukuran 40-unit (w-40 h-40) dengan sudut melengkung dan garis tepi putus-putus (border-dashed). Jika foto sudah ada, gambar akan ditampilkan; jika belum, akan muncul ikon kamera sebagai petunjuk.
+Baris 5-10: Efek Interaksi; menggunakan 'active:scale-95' untuk memberikan umpan balik visual saat layar ditekan, memberikan kesan tombol yang responsif dan nyata.
+Baris 14-15: Script Setup; mendefinisikan 'modelValue' sebagai variabel untuk menampung data gambar dan 'emit' untuk mengirimkan hasil foto kembali ke formulir utama produk.
+Baris 17-20: Pemicu Kamera; fungsi 'handleClip' secara otomatis membuat elemen input file tersembunyi. Properti 'capture="environment"' memerintahkan HP untuk langsung membuka kamera belakang (bukan sekadar galeri) saat kotak ditekan.
+Baris 21-25: Pembaca File (FileReader); setelah foto diambil, sistem membaca data gambar mentah dari memori perangkat untuk diproses lebih lanjut secara asinkron.
+Baris 26-28: Mesin Pengolah Gambar (Canvas); sistem membuat kanvas virtual berukuran 400x400 piksel. Gambar asli yang mungkin berukuran sangat besar akan digambar ulang ke dalam kanvas ini untuk diseragamkan ukurannya.
+Baris 29-31: Kompresi & Output; hasil gambar di kanvas dikonversi menjadi format JPEG dengan kualitas 0.7 (70%). Teknik ini sangat krusial dalam aplikasi PWA agar database lokal (IndexedDB) tidak cepat penuh.
+Baris 32-35: Pengiriman Data; hasil akhir berupa string teks (Base64) dikirimkan kembali ke komponen induk untuk disimpan bersama detail produk lainnya.
+Baris 37: Eksekusi Input; perintah 'input.click()' adalah pemicu yang secara fisik memunculkan jendela pilihan kamera/file di layar pengguna. -->

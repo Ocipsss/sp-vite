@@ -109,3 +109,23 @@ const handleMainButtonClick = () => {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen CartCheckout.vue yang berfungsi sebagai Panel Pembayaran (Payment Summary) di aplikasi Sinar Pagi POS. Panel ini terletak di bagian paling bawah layar transaksi dan merupakan langkah terakhir sebelum pesanan disimpan. Komponen ini sangat krusial karena mengelola pilihan metode pembayaran (Tunai, QRIS, dll.), menghitung kembalian secara otomatis, dan memberikan validasi pintar jika uang yang dimasukkan kasir masih kurang, memastikan setiap transaksi yang diselesaikan sudah akurat secara nominal.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 2: Kontainer Utama; memiliki desain melengkung ke atas (rounded-t-4xl) dengan efek kaca (backdrop-blur) dan bayangan lembut agar terlihat melayang di atas konten daftar belanja.
+Baris 4-29: Panel Pembayaran Tunai; bagian ini hanya muncul (v-if) jika kasir memilih metode "Tunai". Di dalamnya terdapat input untuk jumlah uang yang diterima dan tampilan nominal kembalian secara real-time.
+Baris 11-14: Input Nominal; menggunakan 'inputmode="numeric"' untuk memunculkan keyboard angka. Terhubung ke data 'cart.cashAmount' di pusat data (store).
+Baris 20-22: Logika Kembalian; menampilkan hasil pengurangan uang tunai dengan total belanja. Warna teks akan berubah menjadi hijau jika ada kembalian yang harus diberikan.
+Baris 33-35: Tombol Aksi Utama; tombol dinamis yang teksnya bisa berubah (Uang Pas / Selesaikan Transaksi) tergantung pada jumlah uang yang diketik oleh kasir.
+Baris 38-41: Ringkasan Total; menampilkan angka "Total Tagihan" yang sangat besar dan tebal (font-black) agar kasir tidak salah membacakan nominal kepada pelanggan.
+Baris 43-52: Pilihan Metode Pembayaran; menampilkan daftar tombol (Tunai, QRIS, Piutang) secara berjajar. Tombol yang dipilih akan berwarna biru mencolok, sementara yang lain berwarna pudar.
+Baris 54-61: Tombol Proses Non-Tunai; tombol khusus yang hanya muncul jika metode pembayaran selain tunai dipilih (seperti QRIS), digunakan untuk langsung memproses transaksi tanpa input uang kembali.
+Baris 66-70: Bagian Script; mengimpor fungsi format mata uang dan konstanta daftar metode pembayaran yang didukung oleh sistem Sinar Pagi.
+Baris 73-77: Computed buttonLabel; logika pintar yang menentukan teks pada tombol. Jika kasir tidak mengisi uang tunai, tombol otomatis menjadi "UANG PAS". Jika uang kurang, label berubah menjadi "UANG KURANG".
+Baris 80-82: Computed isButtonDisabled; sistem pengaman yang mencegah transaksi diproses jika keranjang kosong atau jika uang tunai yang dimasukkan belum mencukupi total tagihan.
+Baris 84-89: Fungsi handleMainButtonClick; jika kasir menekan tombol saat input kosong, sistem mengasumsikan pembayaran dengan uang pas, lalu mengirim sinyal 'checkout' ke sistem utama.
+Baris 92-102: Styling CSS Scoped; mengatur animasi transisi 'slide-up' dan 'fade' agar elemen pembayaran muncul dengan gerakan halus dari bawah, memberikan kesan aplikasi yang modern dan elegan. -->

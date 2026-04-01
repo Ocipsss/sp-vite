@@ -117,3 +117,27 @@ onBeforeUnmount(() => window.removeEventListener('mousedown', handleClickOutside
   to { opacity: 1; transform: translateY(0); }
 }
 </style>
+
+
+
+<!-- 
+DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen GlobalSearch yang berfungsi sebagai mesin pencari produk real-time untuk aplikasi Sinar Pagi POS. Komponen ini menggunakan sistem "Autocomplete" atau "Live Suggestion" yang akan menampilkan daftar produk yang relevan saat pengguna mengetik. Fitur unggulannya mencakup penyorotan teks (text highlighting), integrasi langsung ke keranjang belanja (Pinia), pembersihan input sekali klik, serta penanganan klik di luar area (click outside) untuk menutup dropdown secara otomatis.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-2: Pembungkus utama dengan animasi fade-in saat komponen dimuat pertama kali ke layar.
+Baris 4-15: Struktur input teks utama; menggunakan v-model manual (binding value dan event input) untuk mendukung sinkronisasi data dengan komponen induk.
+Baris 17-23: Area ikon pencarian dinamis; menampilkan ikon kaca pembesar saat kosong, dan berubah menjadi tombol silang (X) untuk menghapus teks saat input terisi.
+Baris 25-54: Area Dropdown (Saran Produk); menggunakan transisi Vue untuk efek muncul yang halus. Hanya muncul jika ada hasil pencarian dan kolom input sedang aktif (focus).
+Baris 30-47: Looping daftar produk hasil pencarian; menampilkan informasi lengkap seperti nama produk (dengan highlight), kode barcode, harga jual yang diformat rupiah, serta sisa stok (qty).
+Baris 58-61: Import komposabel useProductSearch untuk logika pencarian dan useCartStore untuk memasukkan produk ke transaksi.
+Baris 63-68: Definisi props (modelValue untuk data pencarian) dan emits untuk memperbarui nilai ke komponen induk.
+Baris 72-78: Destrukturisasi fungsi dari komposabel pencarian, termasuk fungsi fetchSuggestions untuk mengambil data dari database lokal.
+Baris 80-82: Computed showDropdown; logika penentu apakah kotak saran produk layak ditampilkan ke pengguna.
+Baris 84-88: Fungsi handleInput; mengirim perubahan teks ke induk dan memicu pencarian data ke database setiap kali pengguna mengetik.
+Baris 90-94: Fungsi selectProduct; aksi saat pengguna memilih salah satu produk dari saran, otomatis menambahkannya ke keranjang dan membersihkan pencarian.
+Baris 96-100: Fungsi clearSearch; mereset nilai input dan mengosongkan daftar saran produk.
+Baris 102-107: Fungsi handleClickOutside; logika keamanan untuk menutup dropdown pencarian jika pengguna mengklik area di luar kotak pencarian.
+Baris 109-110: Lifecycle Hooks (onMounted/onBeforeUnmount); mendaftarkan dan membersihkan event listener global untuk mendeteksi klik di luar komponen agar tidak terjadi kebocoran memori.
+Baris 113-125: Styling CSS scoped untuk mengatur animasi transisi dropdown, menyembunyikan scrollbar agar tampilan lebih bersih, dan animasi masuk komponen (fade-in).
+-->

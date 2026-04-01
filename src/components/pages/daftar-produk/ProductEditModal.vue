@@ -128,3 +128,22 @@ onUnmounted(() => window.removeEventListener('barcode-scanned-edit', handleScan)
   to { transform: translateY(0); opacity: 1; }
 }
 </style>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen ProductEditModal.vue yang berfungsi sebagai formulir pembaruan data produk (Update Form) dalam aplikasi Sinar Pagi POS. Komponen ini dirancang dengan antarmuka yang sangat informatif, menggunakan pemisahan warna yang jelas (merah untuk Harga Modal dan biru untuk Harga Jual) guna membantu kasir atau admin menghindari kesalahan input. Fitur unggulannya adalah pemformatan angka otomatis secara real-time saat mengetik dan dukungan pemindaian barcode langsung ke dalam formulir menggunakan sistem event listener.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-10: Template Overlay & Header; menciptakan latar belakang gelap dengan efek blur (backdrop-blur-md) dan jendela modal yang muncul dari bawah. Bagian header berisi judul "Update Produk" dan tombol tutup (close).
+Baris 13-28: Bidang Input Nama & Kategori; menyediakan input teks otomatis huruf besar (uppercase) untuk nama produk dan menu pilihan (select) untuk kategori yang datanya diambil dari database.
+Baris 30-52: Grid Input Harga; area krusial yang memisahkan Harga Modal dan Harga Jual. Menggunakan 'inputmode="numeric"' agar keyboard angka otomatis muncul di perangkat mobile.
+Baris 34 & 45: Penggunaan variabel displayModal dan displaySell; menampilkan angka dengan format pemisah ribuan (titik) agar kasir mudah membaca nominal jutaan/ratusan ribu tanpa salah hitung nol.
+Baris 54-65: Grid Stok & Satuan; input untuk mengatur jumlah barang tersedia dan satuan penjualannya (misal: PCS, BOX, atau KG).
+Baris 68-75: Tombol Simpan; menggunakan BaseButton varian 'primary' yang lebar (block) untuk mengirimkan seluruh data formulir kembali ke halaman induk untuk disimpan ke database.
+Baris 79-82: Bagian Script; mengimpor fungsi formatNumber untuk merapikan tampilan angka dan mendefinisikan Props (data masuk) serta Emits (sinyal keluar).
+Baris 87-93: Objek UI Styles; pengganti sistem @apply Tailwind. Variabel ini menyimpan kumpulan class CSS agar kode HTML di bagian atas tetap bersih dan mudah dibaca (scannable).
+Baris 96-98: Inisialisasi Form; membuat salinan data produk asli ke dalam variabel reaktif 'form' agar perubahan yang sedang diketik tidak langsung merusak data asli sebelum tombol simpan ditekan.
+Baris 101-109: Fungsi updatePrice; logika cerdas yang membersihkan input dari karakter non-angka, mengubahnya kembali menjadi angka murni untuk database, dan memperbarui tampilan visual dengan format ribuan secara instan.
+Baris 112-118: Fitur Barcode Scan; secara otomatis menangkap hasil scan dari perangkat luar dan memasukkannya ke kolom kode produk tanpa perlu diketik manual.
+Baris 121-129: CSS Animation; mengatur transisi gerak jendela modal dari bawah ke atas dengan efek pegas (cubic-bezier) agar terasa lebih responsif dan modern. -->
