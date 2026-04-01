@@ -46,14 +46,11 @@
 <script setup lang="ts">
 const props = defineProps(['product', 'displayPack']);
 const emit = defineEmits(['updatePrice']);
-
-// Memastikan teks langsung terblok saat diklik agar bisa langsung ditimpa
 const selectAll = (e: FocusEvent) => {
   const target = e.target as HTMLInputElement;
-  // Sedikit delay agar browser mobile sempat memproses fokus sebelum select
   setTimeout(() => {
     target.select();
-    target.setSelectionRange(0, 9999); // Untuk kompatibilitas iOS
+    target.setSelectionRange(0, 9999);
   }, 50);
 };
 
@@ -64,9 +61,7 @@ const handlePackPrice = (e: any) => {
 
 const handlePackSize = (e: any) => {
   const val = parseInt(e.target.value.replace(/\D/g, "")) || 0;
-  // Langsung update prop secara reaktif
   props.product.pack_size = val;
-  // Trigger hitung ulang harga modal satuan di parent
   emit('updatePrice', 'pack_price', props.product.pack_price);
 };
 </script>
@@ -74,15 +69,16 @@ const handlePackSize = (e: any) => {
 
 
 <!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen WholesaleCalculator.vue yang berfungsi sebagai Fitur Pembagi Harga Grosir untuk aplikasi Sinar Pagi POS. Komponen ini dirancang untuk mempermudah kasir dalam menentukan "Harga Modal per Biji" (pcs) ketika barang dibeli dalam jumlah besar (seperti 1 dus atau 1 pak). Dengan memasukkan total harga satu dus dan jumlah isi di dalamnya, sistem akan secara otomatis melakukan pembagian matematika di latar belakang dan mengisi kolom harga modal secara akurat, sehingga meminimalisir kesalahan hitung manual yang berisiko merugikan toko.
+File ini adalah komponen Kalkulator Grosir (WholesaleCalculator.vue) yang berfungsi sebagai alat bantu hitung otomatis di dalam aplikasi Sinar Pagi. Komponen ini dirancang untuk mempermudah kasir saat melakukan input barang yang dibeli dalam jumlah besar (seperti 1 Dus atau 1 Pak) namun akan dijual secara eceran (per pcs). Dengan memasukkan total harga beli grosir dan jumlah isi di dalamnya, komponen ini secara cerdas akan menghitung pembagian harga modal satuan secara real-time, sehingga margin keuntungan yang ditetapkan pada sistem tetap akurat tanpa perlu melakukan perhitungan manual di luar aplikasi.
 
 PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-3: Kontainer Visual; menggunakan latar belakang biru transparan (bg-blue-50/50) dan garis tepi lembut untuk memisahkan area kalkulator ini dari formulir utama, memberikan kesan sebagai fitur "asisten tambahan".
-Baris 4-10: Header Kalkulator; menampilkan judul "Kalkulator Grosir" dengan ikon kalkulator (ri-calculator-line) sebagai petunjuk fungsi bagi pengguna.
-Baris 12-25: Input Harga Grosir; kolom tempat kasir memasukkan total harga beli untuk 1 dus atau pak. Menggunakan 'displayPack' untuk menampilkan format titik ribuan agar angka mudah dibaca saat diketik.
-Baris 27-40: Input Jumlah Isi; kolom untuk menentukan berapa banyak barang (pcs) yang ada di dalam satu dus tersebut. Di sebelah kanan kolom terdapat label unit produk (misal: 'pcs') yang diambil secara dinamis dari data produk.
-Baris 44: Script Setup; mendefinisikan 'props' untuk menerima data produk dari induknya dan 'emit' untuk mengirimkan sinyal perubahan harga kembali ke formulir utama.
-Baris 48-55: Fungsi selectAll; sebuah fitur kenyamanan (UX) yang sangat penting di HP. Saat kasir menyentuh kolom, seluruh teks akan otomatis terblokir (tersorot), sehingga mereka bisa langsung mengetik angka baru tanpa harus menghapus angka lama satu per satu.
-Baris 57-60: Fungsi handlePackPrice; setiap kali kasir mengetik harga dus, fungsi ini membersihkan karakter non-angka (seperti titik) dan mengirimkan nilai murni (integer) ke komponen induk untuk diproses.
-Baris 62-68: Fungsi handlePackSize; memperbarui jumlah isi barang di dalam objek produk secara langsung. Setelah jumlah isi berubah, fungsi ini memicu ('emit') kalkulasi ulang harga modal per satuan di komponen pusat (useProductForm).
-Baris 20 & 35: Atribut Mobile-Friendly; penggunaan 'inputmode="numeric"' dan 'pattern="[0-9]*"' memastikan bahwa hanya papan ketik angka (numpad) yang muncul di perangkat Android atau iOS, mempercepat proses entri data. -->
+Baris 1-10: Pembungkus Visual; area kalkulator dengan latar belakang biru muda (blue-50) yang memiliki ikon kalkulator dan label "Kalkulator Grosir" dengan tipografi italic black yang tegas.
+Baris 12-24: Input Harga Grosir; field khusus untuk memasukkan harga beli total per Pak atau Dus. Dilengkapi dengan awalan simbol "Rp" dan format input numerik agar nyaman digunakan di perangkat mobile.
+Baris 15-17: Binding Harga; menggunakan ':value="displayPack"' untuk menampilkan format ribuan dan '@input="handlePackPrice"' untuk menangkap setiap perubahan angka yang diketik pengguna.
+Baris 26-37: Input Jumlah Isi; field untuk memasukkan berapa banyak jumlah barang satuan yang ada di dalam satu Pak tersebut (misal: isi 12 atau isi 40).
+Baris 30-31: Binding Isi; terhubung ke property 'pack_size' dan memicu penghitungan ulang harga modal setiap kali jumlah isi diubah oleh kasir.
+Baris 34: Label Satuan; menampilkan teks satuan secara dinamis (misal: 'pcs' atau 'btg') di ujung kolom input untuk memberikan konteks visual yang jelas.
+Baris 41-42: Definisi Props & Emits; menerima data produk dan tampilan harga dari komponen induk (ProductForm), serta menyiapkan saluran 'updatePrice' untuk mengirim hasil hitungan kembali ke state utama.
+Baris 43-49: Fungsi selectAll; fitur kenyamanan (UX) yang secara otomatis menyeleksi seluruh teks saat kolom input disentuh, sehingga pengguna bisa langsung menimpa angka lama tanpa harus menghapusnya satu per satu.
+Baris 51-54: Fungsi handlePackPrice; membersihkan karakter non-angka dari input (seperti titik atau huruf) menggunakan regex, mengubahnya menjadi bilangan bulat (integer), lalu mengirimkan nilainya ke fungsi pembaru harga.
+Baris 56-60: Fungsi handlePackSize; menangkap perubahan jumlah isi barang, memperbarui nilai 'pack_size' pada objek produk, dan memicu pengiriman ulang 'pack_price' agar harga modal satuan dihitung kembali secara otomatis oleh sistem. -->

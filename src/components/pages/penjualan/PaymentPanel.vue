@@ -4,8 +4,6 @@
   style="padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);"
 >
 
-
-    
     <transition name="slide-up">
       <div v-if="cart.payMethod === 'Tunai'" class="mb-4">
         <div class="bg-gray-900 p-5 rounded-3xl shadow-2xl relative">
@@ -82,14 +80,12 @@ import { PAYMENT_METHODS } from "@/constants/app";
 const emit = defineEmits(['checkout']);
 const cart = useCartStore();
 
-// Logika Label Tombol
 const buttonLabel = computed(() => {
   if (!cart.cashAmount || cart.cashAmount === 0) return 'UANG PAS';
   if (cart.cashAmount < cart.totalBelanja) return 'UANG KURANG';
   return 'SELESAIKAN TRANSAKSI';
 });
 
-// Logika Disable Tombol
 const isButtonDisabled = computed(() => 
   cart.items.length === 0 || (cart.cashAmount > 0 && cart.cashAmount < cart.totalBelanja)
 );
@@ -120,19 +116,20 @@ const handleMainButtonClick = () => {
 
 
 <!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen CartCheckout.vue yang berfungsi sebagai Panel Pembayaran (Payment Summary) di aplikasi Sinar Pagi POS. Panel ini terletak di bagian paling bawah layar transaksi dan merupakan langkah terakhir sebelum pesanan disimpan. Komponen ini sangat krusial karena mengelola pilihan metode pembayaran (Tunai, QRIS, dll.), menghitung kembalian secara otomatis, dan memberikan validasi pintar jika uang yang dimasukkan kasir masih kurang, memastikan setiap transaksi yang diselesaikan sudah akurat secara nominal.
+File ini adalah komponen CheckoutBar.vue yang berfungsi sebagai pusat kendali pembayaran (Payment Controller) di bagian bawah layar aplikasi Sinar Pagi POS. Dirancang dengan pendekatan mobile-first, komponen ini menyediakan antarmuka interaktif untuk memilih metode pembayaran (Tunai, QRIS, atau Tempo) secara real-time. Fitur utamanya mencakup kalkulator kembalian otomatis, validasi kecukupan uang tunai, dan tombol cerdas yang berubah fungsi secara dinamis sesuai jumlah uang yang diinput, memberikan alur kerja yang sangat cepat bagi kasir saat menyelesaikan transaksi.
 
 PENJELASAN FUNGSI TIAP BARIS:
-Baris 2: Kontainer Utama; memiliki desain melengkung ke atas (rounded-t-4xl) dengan efek kaca (backdrop-blur) dan bayangan lembut agar terlihat melayang di atas konten daftar belanja.
-Baris 4-29: Panel Pembayaran Tunai; bagian ini hanya muncul (v-if) jika kasir memilih metode "Tunai". Di dalamnya terdapat input untuk jumlah uang yang diterima dan tampilan nominal kembalian secara real-time.
-Baris 11-14: Input Nominal; menggunakan 'inputmode="numeric"' untuk memunculkan keyboard angka. Terhubung ke data 'cart.cashAmount' di pusat data (store).
-Baris 20-22: Logika Kembalian; menampilkan hasil pengurangan uang tunai dengan total belanja. Warna teks akan berubah menjadi hijau jika ada kembalian yang harus diberikan.
-Baris 33-35: Tombol Aksi Utama; tombol dinamis yang teksnya bisa berubah (Uang Pas / Selesaikan Transaksi) tergantung pada jumlah uang yang diketik oleh kasir.
-Baris 38-41: Ringkasan Total; menampilkan angka "Total Tagihan" yang sangat besar dan tebal (font-black) agar kasir tidak salah membacakan nominal kepada pelanggan.
-Baris 43-52: Pilihan Metode Pembayaran; menampilkan daftar tombol (Tunai, QRIS, Piutang) secara berjajar. Tombol yang dipilih akan berwarna biru mencolok, sementara yang lain berwarna pudar.
-Baris 54-61: Tombol Proses Non-Tunai; tombol khusus yang hanya muncul jika metode pembayaran selain tunai dipilih (seperti QRIS), digunakan untuk langsung memproses transaksi tanpa input uang kembali.
-Baris 66-70: Bagian Script; mengimpor fungsi format mata uang dan konstanta daftar metode pembayaran yang didukung oleh sistem Sinar Pagi.
-Baris 73-77: Computed buttonLabel; logika pintar yang menentukan teks pada tombol. Jika kasir tidak mengisi uang tunai, tombol otomatis menjadi "UANG PAS". Jika uang kurang, label berubah menjadi "UANG KURANG".
-Baris 80-82: Computed isButtonDisabled; sistem pengaman yang mencegah transaksi diproses jika keranjang kosong atau jika uang tunai yang dimasukkan belum mencukupi total tagihan.
-Baris 84-89: Fungsi handleMainButtonClick; jika kasir menekan tombol saat input kosong, sistem mengasumsikan pembayaran dengan uang pas, lalu mengirim sinyal 'checkout' ke sistem utama.
-Baris 92-102: Styling CSS Scoped; mengatur animasi transisi 'slide-up' dan 'fade' agar elemen pembayaran muncul dengan gerakan halus dari bawah, memberikan kesan aplikasi yang modern dan elegan. -->
+Baris 1-6: Pembungkus Utama; panel melayang (fixed bottom) dengan efek kaca (backdrop-blur) dan sudut melengkung yang lebar (2.5rem), menggunakan variabel aman (safe-area-inset) agar tidak terpotong di layar iPhone/Android terbaru.
+Baris 8-36: Panel Input Tunai; area khusus yang hanya muncul (slide-up) jika metode bayar 'Tunai' dipilih. Berisi input angka besar untuk nominal uang dari pelanggan dan indikator kembalian otomatis.
+Baris 14-23: Input Nominal; kolom input angka (numeric mode) yang terhubung ke state cart.cashAmount untuk menghitung uang masuk.
+Baris 24-29: Tampilan Kembali; menampilkan angka kembalian yang secara otomatis berubah warna menjadi hijau jika nominal uang tunai melebihi total tagihan.
+Baris 32-38: Tombol Aksi Tunai; tombol dinamis yang bisa berubah label menjadi "UANG PAS", "UANG KURANG", atau "SELESAIKAN" berdasarkan logika perbandingan antara kas dan total belanja.
+Baris 42-45: Ringkasan Tagihan; menampilkan label "Total Tagihan" dan nominal besar yang diformat menjadi mata uang Rupiah untuk kejelasan visual akhir sebelum bayar.
+Baris 47-56: Pilihan Metode Bayar (v-for); merender tombol-tombol metode pembayaran (Tunai, QRIS, Tempo) yang tersimpan di konstanta aplikasi, dengan indikator warna biru saat salah satu dipilih.
+Baris 58-68: Tombol Proses Non-Tunai; tombol checkout khusus yang muncul (fade-in) hanya jika metode non-tunai dipilih, berfungsi untuk memicu proses finalisasi tanpa input uang fisik.
+Baris 72-76: Impor Dependensi; mengambil fungsi reaktivitas Vue, akses ke state keranjang belanja global, modul pemformatan angka, dan daftar metode pembayaran resmi.
+Baris 78-79: Definisi Emit & Store; mengaktifkan event 'checkout' untuk dikirim ke halaman induk dan menghubungkan data ke Cart Store.
+Baris 81-85: Computed buttonLabel; logika cerdas untuk menentukan teks pada tombol utama berdasarkan kondisi input uang tunai kasir.
+Baris 87-89: Computed isButtonDisabled; proteksi sistem untuk mencegah transaksi jika keranjang kosong atau jika jumlah uang tunai yang dimasukkan masih kurang dari total belanja.
+Baris 91-98: Fungsi handleMainButtonClick; menangani aksi klik tombol utama. Jika ditekan saat input kosong, sistem otomatis menganggap "Uang Pas", jika tidak maka akan memicu proses checkout final.
+Baris 102-113: Animasi CSS; mendefinisikan efek transisi 'slide-up' dan 'fade' agar elemen-elemen pembayaran muncul dan hilang dengan gerakan yang halus dan profesional. -->

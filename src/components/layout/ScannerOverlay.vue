@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed inset-0 z-[100] bg-white flex flex-col p-6 animate-zoom-in">
+  <div class="fixed inset-0 z-100 bg-white flex flex-col p-6 animate-zoom-in">
     <div class="flex justify-between items-center mb-6">
       <div class="flex flex-col">
         <span class="text-xs font-black uppercase tracking-widest text-blue-600">
@@ -37,9 +37,8 @@ import { useCartStore } from '@/stores/cart';
 import { useScanner } from '@/composables/useScanner';
 import { db } from '@/database';
 
-// MODIFIKASI: Tambahkan props mode
 const props = defineProps({
-  mode: { type: String, default: 'cashier' } // 'cashier' atau 'inventory'
+  mode: { type: String, default: 'cashier' }
 });
 
 const emit = defineEmits(['close', 'detected']);
@@ -54,17 +53,14 @@ const onScanSuccess = async (decodedText: string) => {
 
     // LOGIKA CABANG:
     if (props.mode === 'inventory') {
-      // MODE INPUT PRODUK: Lempar data ke form TambahProduk.vue
       emit('detected', { code: decodedText, product: product || null });
       closeScanner();
     } else {
-      // MODE KASIR (Default): Tetap pakai logika lama kamu
       if (product) {
         cart.addToCart(product);
         closeScanner();
       } else {
         console.warn(`Barcode ${decodedText} tidak ditemukan.`);
-        // Opsional: Kasih notifikasi suara/alert kalau barang gak ada di kasir
       }
     }
   } catch (error) {
@@ -96,21 +92,19 @@ onBeforeUnmount(() => stopScanner());
 
 
 
-<!-- 
-DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen ScannerOverlay yang berfungsi sebagai antarmuka pemindai barcode (barcode scanner) berbasis kamera untuk aplikasi Sinar Pagi POS. Komponen ini dirancang untuk menutupi seluruh layar (overlay) saat aktif, memberikan pengalaman pengguna yang fokus dan intuitif. Fitur utamanya adalah integrasi langsung dengan database lokal (IndexedDB) untuk pencarian produk otomatis berdasarkan kode hasil pindaian, serta penggunaan feedback fisik (getaran/vibration) untuk menandakan pindaian berhasil.
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen ScannerOverlay.vue yang berfungsi sebagai antarmuka pemindai barcode berbasis kamera (Camera-based Barcode Scanner) untuk aplikasi Sinar Pagi POS. Komponen ini dirancang dengan tampilan layar penuh (fixed overlay) yang modern, dilengkapi dengan elemen visual seperti garis laser pemindai (scanning line) dan indikator status kamera. Keunggulan utama komponen ini adalah "Logika Cabang" yang memungkinkannya bekerja dalam dua mode: Mode Kasir (langsung memasukkan barang ke keranjang) dan Mode Inventaris (mencari data produk untuk pengeditan stok), memberikan fleksibilitas tinggi dalam operasional toko.
 
 PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-2: Pembungkus utama overlay dengan posisi fixed (menutup seluruh layar), latar belakang putih, dan animasi zoom-in untuk efek transisi yang menarik.
-Baris 3-12: Area header overlay; menampilkan status aktif scanner, petunjuk instruksi bagi kasir, dan tombol silang (X) untuk menutup mode scanner secara manual.
-Baris 14: Elemen penampung (container) dengan ID "reader"; di sinilah library scanner akan merender tampilan kamera secara otomatis dengan styling sudut melengkung dan rasio layar 4:3.
-Baris 16-18: Area footer dekoratif; menampilkan branding "Sinar Pagi POS System" dengan teks tipografi yang minimalis dan profesional.
-Baris 22-25: Bagian script setup; mengimpor lifecycle hooks Vue, store keranjang (Pinia), komposabel scanner kustom, serta koneksi ke database lokal.
-Baris 27-28: Inisialisasi akses ke store keranjang belanja dan destrukturisasi fungsi start/stop dari komposabel pemindai.
-Baris 30: Fungsi onScanSuccess; callback asinkron yang akan dijalankan secara otomatis saat kamera berhasil membaca sebuah barcode.
-Baris 32-33: Logika pencarian database; mencari data produk di tabel 'products' yang kolom 'code'-nya cocok dengan teks barcode hasil pindaian.
-Baris 35-37: Penanganan jika produk ditemukan; memasukkan produk ke keranjang belanja, memberikan efek getar pada perangkat mobile (vibration API), dan menutup overlay scanner.
-Baris 39: Penanganan jika produk tidak ditemukan; menampilkan pesan peringatan (alert) bahwa barcode tersebut tidak terdaftar di sistem.
-Baris 43-47: Lifecycle onMounted; menjalankan fungsi startScanner setelah elemen HTML selesai dirender (dengan jeda 300ms untuk memastikan elemen "reader" tersedia di DOM).
-Baris 49: Lifecycle onBeforeUnmount; memastikan kamera otomatis dimatikan saat komponen dihancurkan atau ditutup agar tidak menguras daya baterai.
--->
+Baris 1-2: Pembungkus utama overlay (fixed inset-0) dengan latar belakang putih dan animasi zoom-in untuk memberikan transisi visual yang halus saat scanner dibuka.
+Baris 3-10: Bagian Header; menampilkan judul mode scanner (Inventaris atau Kasir) secara dinamis dan teks petunjuk arah barcode dengan tipografi yang tebal dan bersih.
+Baris 11-16: Tombol Tutup (Close); tombol melingkar dengan ikon silang untuk membatalkan proses pemindaian dan menutup overlay kamera.
+Baris 19-21: Kontainer Kamera (id="reader"); wadah tempat feed video kamera muncul. Memiliki sudut membulat (rounded-2xl) dan garis laser biru animasi (animate-pulse) untuk membantu pengguna membidik barcode.
+Baris 23-31: Bagian Footer; menampilkan indikator "Kamera Ready" dengan lampu hijau berkedip serta branding sistem "Sinar Pagi POS" sebagai identitas aplikasi.
+Baris 35-39: Impor Modul; mengambil fungsi lifecycle Vue, akses ke Cart Store (untuk kasir), composable scanner, dan koneksi database Dexie (db).
+Baris 41-44: Definisi Props; menerima properti 'mode' untuk menentukan perilaku scanner (default ke 'cashier').
+Baris 46-48: Inisialisasi Emit & Store; mendefinisikan event keluar ('close' & 'detected') serta mengaktifkan fungsi keranjang belanja dan mesin pemindai.
+Baris 50-71: Fungsi onScanSuccess; logika utama setelah barcode terdeteksi. Mencari produk di database lokal, memberikan respon getar (vibrate), dan menentukan apakah data dikirim ke form inventaris atau langsung ke keranjang kasir.
+Baris 73-80: Fungsi closeScanner; memastikan proses kamera dihentikan (stopScanner) sebelum menutup overlay untuk menghemat baterai dan menjaga privasi pengguna.
+Baris 82-90: Lifecycle onMounted; memicu startScanner setelah DOM siap (nextTick) dengan sedikit penundaan (timeout) untuk memastikan inisialisasi kamera berjalan stabil tanpa lag.
+Baris 92: Lifecycle onBeforeUnmount; memastikan kamera otomatis mati saat pengguna berpindah halaman atau menutup komponen guna mencegah kebocoran memori. -->

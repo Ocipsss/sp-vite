@@ -49,7 +49,6 @@ const isEditModalOpen = ref(false);
 const isDetailModalOpen = ref(false);
 const selectedProduct = ref<Product | null>(null);
 
-// Menggunakan filter dari store
 const filteredProducts = computed(() => {
   const query = (cart.searchQuery || "").toLowerCase().trim();
   if (!query) return products.value;
@@ -95,7 +94,6 @@ const handleDelete = async (id: string) => {
   }
 };
 
-// Event Listeners
 const handleOpenDetailEvent = (e: CustomEvent) => {
   const p = products.value.find(item => item.id === e.detail);
   if (p) openDetail(p);
@@ -114,18 +112,22 @@ onUnmounted(() => {
 
 
 <!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen DaftarProduk.vue yang berfungsi sebagai pusat manajemen inventaris dalam aplikasi Sinar Pagi POS. Komponen ini menangani alur kerja lengkap (CRUD) untuk produk, mulai dari menampilkan daftar barang yang bisa difilter secara real-time, melihat detail spesifikasi barang, hingga melakukan perubahan data atau penghapusan. Desainnya dioptimalkan untuk penggunaan mobile dengan sistem modal (pop-up) yang bertumpuk, memastikan kasir dapat mengelola stok barang dengan cepat tanpa harus berpindah-pindah halaman secara manual.
+File ini adalah komponen utama manajemen katalog (Product Inventory List) yang berfungsi sebagai pusat penampil, pencari, dan pengelola data barang dalam aplikasi Sinar Pagi. Komponen ini mengintegrasikan sistem pencarian reaktif (computed search) dengan database lokal Dexie untuk menyajikan daftar produk secara instan. Selain menampilkan list, file ini juga bertindak sebagai pengendali (controller) untuk alur kerja CRUD (Create, Read, Update, Delete) melalui modal detail dan modal edit, serta menangani sinkronisasi tampilan secara otomatis setiap kali ada perubahan data fisik di penyimpanan.
 
 PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-17: Area Template Utama; menggunakan elemen ProductItem yang diulang (v-for) untuk menampilkan setiap barang dalam koleksi data. Terdapat juga logika tampilan cadangan jika hasil pencarian kosong (Empty State).
-Baris 19-25: Komponen ProductDetailModal; pop-up yang muncul saat sebuah produk diklik untuk menampilkan informasi lengkap, serta menyediakan tombol aksi untuk edit atau hapus.
-Baris 27-33: Komponen ProductEditModal; formulir pop-up untuk mengubah informasi produk seperti nama, harga, atau stok, yang terhubung langsung dengan daftar kategori yang ada.
-Baris 37-43: Mengimpor fungsi reaktivitas Vue, koneksi database Dexie, state management Pinia (untuk fitur pencarian), serta komponen-komponen pendukung lainnya.
-Baris 45-51: Inisialisasi State; menyiapkan variabel reaktif untuk menampung daftar produk, daftar kategori, serta mengontrol status buka/tutup jendela modal detail dan edit.
-Baris 54-60: Computed filteredProducts; jantung dari fitur pencarian. Fungsi ini secara otomatis menyaring daftar produk berdasarkan nama atau barcode (code) sesuai dengan apa yang diketikkan kasir di kolom pencarian global.
-Baris 62-65: Fungsi loadData; mengambil data produk terbaru dari database lokal dan mengurutkannya berdasarkan nama secara alfabetis agar daftar terlihat rapi.
-Baris 67-76: Fungsi openDetail & openEdit; mengatur alur perpindahan antar modal. Saat beralih ke mode edit, modal detail akan ditutup secara otomatis untuk menjaga fokus pengguna.
-Baris 78-89: Fungsi handleUpdate; menyimpan perubahan data ke database lokal menggunakan perintah .put, memperbarui stempel waktu (updatedAt), lalu menyegarkan tampilan daftar produk.
-Baris 91-97: Fungsi handleDelete; memberikan konfirmasi keamanan sebelum menghapus data produk secara permanen dari penyimpanan perangkat.
-Baris 100-103: Fungsi handleOpenDetailEvent; sebuah "Event Listener" kustom yang memungkinkan komponen lain (seperti hasil scan barcode) untuk memerintahkan halaman ini membuka detail produk tertentu secara otomatis.
-Baris 105-112: Lifecycle Hooks (onMounted & onUnmounted); menjalankan pengambilan data saat halaman dibuka dan membersihkan pendengar event saat halaman ditinggalkan untuk mencegah kebocoran memori (memory leak). -->
+Baris 1-2: Pembungkus utama halaman dengan warna latar belakang slate lembut dan area scroll yang dioptimalkan untuk perangkat mobile.
+Baris 3-9: Iterasi Produk (v-for); merender setiap data barang menggunakan komponen ProductItem secara dinamis berdasarkan hasil filter pencarian.
+Baris 11-14: Tampilan Kosong (Empty State); memberikan umpan balik visual berupa ikon arsip dan teks peringatan jika tidak ada produk yang cocok dengan kata kunci pencarian.
+Baris 17-23: Modal Detail Produk; komponen popup yang muncul saat item diklik, berfungsi untuk menampilkan informasi lengkap barang serta menyediakan akses ke fungsi hapus dan edit.
+Baris 25-31: Modal Edit Produk; komponen formulir khusus untuk memperbarui data produk (seperti nama, harga, atau kategori) yang terhubung langsung ke skema database.
+Baris 35-41: Impor dependensi; mengambil fungsi reaktivitas Vue, koneksi database lokal (IndexedDB), akses ke Cart Store untuk sinkronisasi pencarian, dan tipe data Product.
+Baris 43-49: Inisialisasi State; mendefinisikan variabel reaktif untuk menampung daftar produk, kategori, status buka/tutup modal, serta referensi produk yang sedang dipilih oleh pengguna.
+Baris 51-57: Computed filteredProducts; logika pencarian pintar yang menyaring daftar barang berdasarkan nama atau barcode secara real-time mengikuti input user di search bar.
+Baris 59-62: Fungsi loadData; melakukan query asinkron ke database lokal untuk mengambil data produk terbaru yang diurutkan berdasarkan abjad (A-Z).
+Baris 64-67: Fungsi openDetail; menangani aksi klik pengguna untuk menetapkan produk aktif dan membuka jendela detail informasi.
+Baris 69-73: Fungsi openEdit; mengalihkan alur kerja dari tampilan detail ke jendela pengeditan data produk.
+Baris 75-86: Fungsi handleUpdate; memproses penyimpanan data hasil editan ke database, memperbarui stempel waktu (updatedAt), dan menyegarkan tampilan daftar secara otomatis.
+Baris 88-94: Fungsi handleDelete; menjalankan prosedur penghapusan data permanen dari database lokal dengan konfirmasi keamanan terlebih dahulu.
+Baris 96-99: Fungsi handleOpenDetailEvent; listener khusus yang memungkinkan komponen lain (seperti hasil scan atau notifikasi) untuk memicu pembukaan detail produk melalui Event Global.
+Baris 101-104: Lifecycle onMounted; memicu pemuatan data awal dan mendaftarkan Event Listener eksternal saat komponen pertama kali muncul di layar.
+Baris 106-108: Lifecycle onUnmounted; membersihkan Event Listener saat pengguna meninggalkan halaman guna mencegah kebocoran memori (memory leak). -->

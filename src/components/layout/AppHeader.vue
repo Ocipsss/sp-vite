@@ -63,7 +63,6 @@ const cart = useCartStore();
 const route = useRoute();
 const router = useRouter();
 
-// Logika penentuan halaman: TRUE jika BUKAN di Penjualan/Daftar Produk
 const isNotOnMainPages = computed(() => {
   const currentName = route.name as string;
   const mainPages = ['Penjualan', 'Daftar Produk'];

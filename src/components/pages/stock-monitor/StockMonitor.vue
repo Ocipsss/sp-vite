@@ -1,5 +1,5 @@
 <template>
-  <div class="fixed top-[64px] left-0 w-full h-[calc(100vh-64px)] bg-slate-50 flex flex-col overflow-hidden">
+  <div class="fixed top-16 left-0 w-full h-[calc(100vh-64px)] bg-slate-50 flex flex-col overflow-hidden">
     
     <div class="w-full bg-slate-50 pt-3 pb-3 px-6 z-50 shrink-0 shadow-sm border-b border-slate-100">
       <div class="mb-4">
@@ -40,7 +40,7 @@
         <div 
           v-for="p in filteredProducts" 
           :key="p.id" 
-          class="bg-white p-3 rounded-[1.5rem] border border-slate-100 shadow-sm flex items-center justify-between animate-zoom-in transition-all active:bg-slate-50"
+          class="bg-white p-3 rounded-3xl border border-slate-100 shadow-sm flex items-center justify-between animate-zoom-in transition-all active:bg-slate-50"
         >
           <div class="flex items-center gap-4 min-w-0">
             <div 
@@ -94,16 +94,12 @@
 import { ref, computed, onMounted } from 'vue';
 import { db } from '@/database';
 
-// Variabel fdb untuk Firebase (Jika kamu pakai Firebase SDK)
 declare const fdb: any;
 
-// --- STATE ---
 const products = ref<any[]>([]);
 const filterStatus = ref('all');
 const searchQuery = ref('');
 const isLoading = ref(false);
-
-// --- LOGIC ---
 
 const loadStock = async () => {
   isLoading.value = true;
@@ -112,7 +108,6 @@ const loadStock = async () => {
   try {
     let allProducts = [];
     
-    // Sinkronisasi Hybrid: Firebase -> Lokal (IndexedDB)
     if (typeof fdb !== 'undefined') {
       const snapshot = await fdb.ref('products').once('value');
       const data = snapshot.val();
@@ -122,11 +117,9 @@ const loadStock = async () => {
         await db.table('products').bulkAdd(allProducts);
       }
     } else {
-      // Jika offline/tanpa firebase, ambil dari IndexedDB lokal
       allProducts = await db.table('products').toArray();
     }
     
-    // Urutkan berdasarkan sisa stok paling sedikit
     products.value = allProducts.sort((a, b) => (a.stock || a.qty) - (b.stock || b.qty));
   } catch (err) {
     console.error("Gagal sinkronisasi stok:", err);
@@ -135,11 +128,9 @@ const loadStock = async () => {
   }
 };
 
-// Filtered List
 const filteredProducts = computed(() => {
   let list = products.value;
 
-  // Search
   if (searchQuery.value) {
     const q = searchQuery.value.toLowerCase();
     list = list.filter(p => 
@@ -148,7 +139,6 @@ const filteredProducts = computed(() => {
     );
   }
 
-  // Logika Filter Status (Berdasarkan Batang)
   if (filterStatus.value === 'kritis') {
     return list.filter(p => (p.stock || p.qty) <= 12); // Stok <= 1 bungkus (12 btg)
   }
@@ -159,7 +149,6 @@ const filteredProducts = computed(() => {
   return list;
 });
 
-// Theme & Labeling
 const getStockTheme = (qty: number) => {
   const q = Number(qty || 0);
   if (q <= 12) return 'bg-rose-50 text-rose-500 border-rose-100 shadow-rose-100/50';
@@ -192,3 +181,26 @@ onMounted(loadStock);
   to { opacity: 1; transform: scale(1); }
 }
 </style>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen Pantauan Stok (StockMonitoring.vue) yang berfungsi sebagai sistem peringatan dini (Early Warning System) untuk manajemen inventaris di Sinar Pagi POS. Komponen ini dirancang khusus untuk memantau ketersediaan produk secara real-time dengan fokus pada identifikasi stok yang kritis atau menipis. Menggunakan integrasi Firebase (fdb) untuk sinkronisasi awan dan Dexie untuk penyimpanan lokal, halaman ini memungkinkan pemilik toko untuk menyaring produk berdasarkan status keamanan stok, melakukan pencarian cepat, serta melakukan sinkronisasi ulang data hanya dengan satu sentuhan, memastikan rak toko tidak pernah kosong.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-3: Pembungkus utama halaman; menggunakan posisi fixed dengan perhitungan tinggi dinamis (calc) agar area konten tetap konsisten di bawah top-bar sistem.
+Baris 5-23: Panel Pencarian & Filter; header statis (shrink-0) yang berisi kolom input pencarian produk dengan desain rounded-2xl dan tombol pembersihan input cepat.
+Baris 25-36: Tab Status Filter; tombol navigasi untuk menyaring daftar barang menjadi tiga kategori: 'All' (Semua), 'Kritis' (Sangat Sedikit), dan 'Menipis' (Perlu Order), lengkap dengan indikator warna biru saat aktif.
+Baris 39-44: Indikator Loading; menampilkan animasi putar (spin) dan teks "Sinkronisasi Data" saat aplikasi sedang mengambil data terbaru dari Firebase atau database lokal.
+Baris 46-73: Iterasi Daftar Stok (v-for); merender kartu produk yang berisi informasi kuantitas dalam satuan 'btg' (batang), nama produk, kategori, serta label status keamanan stok (Kritis/Menipis/Aman).
+Baris 50-57: Badge Kuantitas; kotak informasi jumlah stok yang warnanya berubah secara dinamis (merah/kuning/biru) berdasarkan tingkat urgensi ketersediaan barang.
+Baris 75-80: Tombol Refresh; tombol shortcut individual untuk memicu fungsi sinkronisasi stok ulang guna memastikan data yang dilihat adalah yang paling mutakhir.
+Baris 82-87: State Kosong (Empty State); tampilan fallback dengan ikon inbox jika hasil pencarian atau filter tidak menemukan produk satupun di dalam database.
+Baris 93-99: Inisialisasi State; variabel reaktif untuk menampung data produk, status filter aktif, kata kunci pencarian, dan status pemuatan data (isLoading).
+Baris 101-125: Fungsi loadStock; logika inti untuk sinkronisasi. Fungsi ini mencoba mengambil data dari Firebase (Realtime Database), membersihkan database lokal, lalu mengisinya kembali dengan data terbaru dan mengurutkannya dari stok terendah ke tertinggi.
+Baris 127-144: Computed filteredProducts; mesin pencari dan penyaring otomatis. Menggabungkan filter teks (nama/kategori) dengan filter status stok (Kritis: <= 12 btg, Menipis: 13-36 btg) secara reaktif.
+Baris 146-151: Fungsi getStockTheme; utilitas untuk menentukan kelas warna CSS berdasarkan jumlah stok. Merah untuk kondisi kritis, Amber untuk menipis, dan Biru untuk kondisi aman.
+Baris 153-158: Fungsi getStatusLabel; memberikan label teks deskriptif (Kritis, Menipis, Aman) berdasarkan logika ambang batas jumlah barang yang tersedia.
+Baris 160: Fungsi formatQty; memastikan angka stok ditampilkan sebagai bilangan bulat (integer) tanpa desimal untuk kemudahan pembacaan.
+Baris 162: Lifecycle onMounted; menjalankan proses sinkronisasi stok otomatis segera setelah pengguna membuka halaman pantauan ini.
+Baris 165-178: Animasi & Style; konfigurasi CSS untuk menyembunyikan scrollbar dan animasi 'zoom-in' untuk memberikan kesan transisi yang halus saat daftar produk muncul. -->

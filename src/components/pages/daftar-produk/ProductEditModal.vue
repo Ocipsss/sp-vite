@@ -87,7 +87,6 @@ const props = defineProps<{
 
 const emit = defineEmits(['close', 'save']);
 
-// --- UI STYLES (Pengganti @apply) ---
 const ui = {
   modalOverlay: "fixed inset-0 z-120 flex items-end justify-center p-4 bg-slate-900/80 backdrop-blur-md",
   modalContent: "bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate-slide-up overflow-y-auto max-h-[90vh]",
@@ -96,7 +95,6 @@ const ui = {
   input: "w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-blue-500 transition-all"
 };
 
-// --- LOGIC & STATE ---
 const form = ref<Product>({ ...props.product } as Product);
 const displayModal = ref(formatNumber(form.value.price_modal));
 const displaySell = ref(formatNumber(form.value.price_sell));
@@ -110,7 +108,6 @@ const updatePrice = (field: 'price_modal' | 'price_sell', event: any) => {
   if (field === 'price_sell') displaySell.value = formatNumber(numValue);
 };
 
-// Handle Barcode Scan
 const handleScan = (e: any) => {
   form.value.code = e.detail;
 };
@@ -132,18 +129,20 @@ onUnmounted(() => window.removeEventListener('barcode-scanned-edit', handleScan)
 
 
 <!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen ProductEditModal.vue yang berfungsi sebagai formulir pembaruan data produk (Update Form) dalam aplikasi Sinar Pagi POS. Komponen ini dirancang dengan antarmuka yang sangat informatif, menggunakan pemisahan warna yang jelas (merah untuk Harga Modal dan biru untuk Harga Jual) guna membantu kasir atau admin menghindari kesalahan input. Fitur unggulannya adalah pemformatan angka otomatis secara real-time saat mengetik dan dukungan pemindaian barcode langsung ke dalam formulir menggunakan sistem event listener.
+File ini adalah komponen ProductEditModal.vue yang berfungsi sebagai antarmuka penyuntingan data produk (Edit Form) dalam bentuk jendela sembulan (modal) yang muncul dari bawah layar (slide-up). Dirancang khusus untuk pengalaman mobile, komponen ini menyediakan formulir lengkap untuk memperbarui informasi vital barang seperti nama, kategori, harga modal/jual, hingga stok. Komponen ini memiliki fitur pemformatan angka otomatis (auto-format ribuan) saat mengetik harga dan mendukung integrasi pemindai barcode eksternal melalui event listener, memastikan proses pembaruan data inventaris tetap cepat dan akurat.
 
 PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-10: Template Overlay & Header; menciptakan latar belakang gelap dengan efek blur (backdrop-blur-md) dan jendela modal yang muncul dari bawah. Bagian header berisi judul "Update Produk" dan tombol tutup (close).
-Baris 13-28: Bidang Input Nama & Kategori; menyediakan input teks otomatis huruf besar (uppercase) untuk nama produk dan menu pilihan (select) untuk kategori yang datanya diambil dari database.
-Baris 30-52: Grid Input Harga; area krusial yang memisahkan Harga Modal dan Harga Jual. Menggunakan 'inputmode="numeric"' agar keyboard angka otomatis muncul di perangkat mobile.
-Baris 34 & 45: Penggunaan variabel displayModal dan displaySell; menampilkan angka dengan format pemisah ribuan (titik) agar kasir mudah membaca nominal jutaan/ratusan ribu tanpa salah hitung nol.
-Baris 54-65: Grid Stok & Satuan; input untuk mengatur jumlah barang tersedia dan satuan penjualannya (misal: PCS, BOX, atau KG).
-Baris 68-75: Tombol Simpan; menggunakan BaseButton varian 'primary' yang lebar (block) untuk mengirimkan seluruh data formulir kembali ke halaman induk untuk disimpan ke database.
-Baris 79-82: Bagian Script; mengimpor fungsi formatNumber untuk merapikan tampilan angka dan mendefinisikan Props (data masuk) serta Emits (sinyal keluar).
-Baris 87-93: Objek UI Styles; pengganti sistem @apply Tailwind. Variabel ini menyimpan kumpulan class CSS agar kode HTML di bagian atas tetap bersih dan mudah dibaca (scannable).
-Baris 96-98: Inisialisasi Form; membuat salinan data produk asli ke dalam variabel reaktif 'form' agar perubahan yang sedang diketik tidak langsung merusak data asli sebelum tombol simpan ditekan.
-Baris 101-109: Fungsi updatePrice; logika cerdas yang membersihkan input dari karakter non-angka, mengubahnya kembali menjadi angka murni untuk database, dan memperbarui tampilan visual dengan format ribuan secara instan.
-Baris 112-118: Fitur Barcode Scan; secara otomatis menangkap hasil scan dari perangkat luar dan memasukkannya ke kolom kode produk tanpa perlu diketik manual.
-Baris 121-129: CSS Animation; mengatur transisi gerak jendela modal dari bawah ke atas dengan efek pegas (cubic-bezier) agar terasa lebih responsif dan modern. -->
+Baris 1-2: Pembungkus utama modal (overlay); menggunakan efek blur latar belakang dan deteksi klik di luar area (click.self) untuk menutup modal secara instan.
+Baris 3-10: Bagian Header Modal; menampilkan judul "Update Produk" dengan gaya tipografi tebal dan tombol tutup (close) dengan ikon silang yang memiliki efek transisi saat ditekan.
+Baris 13-16: Input Nama Produk; kolom teks untuk mengubah nama barang yang secara otomatis dikonversi menjadi huruf kapital (uppercase) melalui kelas CSS.
+Baris 18-28: Input Kategori; menggunakan elemen select dinamis yang merender daftar kategori dari database, dilengkapi dengan ikon panah khusus untuk mempertegas identitas visual dropdown.
+Baris 30-49: Grid Harga Modal & Jual; dua kolom input berdampingan dengan skema warna kontras (merah untuk modal, biru untuk jual) yang memudahkan kasir membedakan pengeluaran dan pendapatan.
+Baris 51-60: Grid Stok & Satuan; kolom untuk memperbarui jumlah fisik barang (qty) dan satuan hitungnya (seperti PCS, DUS, atau BKS) secara sejajar.
+Baris 63-71: Tombol Simpan (BaseButton); tombol utama berukuran besar yang mengirimkan data formulir yang sudah diubah (form) kembali ke komponen induk melalui event 'save'.
+Baris 75-81: Definisi Props & Emits; menerima data produk yang akan diedit serta daftar kategori, dan menyediakan saluran komunikasi untuk event tutup serta simpan.
+Baris 83-89: Konfigurasi UI (Style Objects); mendefinisikan kumpulan kelas Tailwind CSS dalam satu objek untuk menjaga kerapian kode template dan memudahkan pemeliharaan gaya visual.
+Baris 91-93: Inisialisasi Form; menduplikasi data produk dari props ke dalam variabel reaktif 'form' agar perubahan di formulir tidak langsung mengubah data asli sebelum disimpan.
+Baris 95-103: Fungsi updatePrice; logika cerdas yang membersihkan input dari karakter non-angka, memperbarui nilai numerik di database, dan memformat ulang tampilan angka dengan pemisah ribuan secara real-time.
+Baris 105-108: Fungsi handleScan; memungkinkan pengisian atau perubahan kode barcode produk secara otomatis jika ada sinyal dari alat pemindai (scanner).
+Baris 110-111: Lifecycle onMounted & onUnmounted; mendaftarkan dan membersihkan event listener global untuk barcode guna mencegah kebocoran memori (memory leak) saat modal ditutup.
+Baris 114-122: Animasi CSS; mendefinisikan efek 'slide-up' dengan kurva bezier khusus untuk memberikan kesan gerakan yang membal (bouncy) dan premium saat modal muncul. -->

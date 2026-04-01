@@ -33,21 +33,25 @@ import { computed, markRaw } from 'vue';
 import { useRoute } from 'vue-router';
 
 // IMPORT HALAMAN YANG SUDAH MIGRASI
-import Penjualan from '../components/pages/penjualan/Penjualan.vue';
 import DaftarProduk from '../components/pages/daftar-produk/DaftarProduk.vue';
-import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue';
-import TambahProduk from '../components/pages/tambah-produk/TambahProduk.vue';
 import Dashboard from '../components/pages/dashboard/Dashboard.vue';
+import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue';
+import Penjualan from '../components/pages/penjualan/Penjualan.vue';
+import RiwayatTransaksi from '../components/pages/riwayat-transaksi/RiwayatTransaksi.vue';
+import StockMonitor from '../components/pages/stock-monitor/StockMonitor.vue';
+import TambahProduk from '../components/pages/tambah-produk/TambahProduk.vue';
 
 const route = useRoute();
 
 // Mapping Nama Route ke Komponen
 const componentsMap: Record<string, any> = {
-  'Penjualan': markRaw(Penjualan),
   'Daftar Produk': markRaw(DaftarProduk),
+  'Dashboard': markRaw(Dashboard),
   'Kategori Produk': markRaw(KategoriProduk),
-  'Tambah Produk': markRaw(TambahProduk),
-  'Dashboard': markRaw(Dashboard), // Sinkronkan dengan router
+  'Penjualan': markRaw(Penjualan),
+  'Riwayat Transaksi': markRaw(RiwayatTransaksi),
+  'Stock Monitor': markRaw(StockMonitor),
+  'Tambah Produk': markRaw(TambahProduk), // Sinkronkan dengan router
 };
 
 const title = computed(() => (route.name as string) || 'Halaman');

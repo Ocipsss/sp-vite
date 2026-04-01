@@ -41,7 +41,7 @@ export function useProductForm() {
   const selectProduct = (p: any) => {
     product.value = { 
       ...p, 
-      qty: 0, // Reset input stok baru agar tidak dobel
+      qty: 0,
       id: p.id 
     };
     displayModal.value = formatDisplay(p.price_modal);
@@ -63,7 +63,6 @@ export function useProductForm() {
     showSuggestions.value = false;
   };
 
-  // --- LOGIKA PINTAR (PREFIX FIRST) ---
   watch(() => product.value.name, (newName) => {
     if (isExistingProduct.value) return;
     
@@ -75,14 +74,10 @@ export function useProductForm() {
         .sort((a, b) => {
           const nameA = a.name.toLowerCase();
           const nameB = b.name.toLowerCase();
-          
-          // Prioritas 1: Yang AWALANNYA cocok (Contoh: "in" -> Indomie)
           const startA = nameA.startsWith(query);
           const startB = nameB.startsWith(query);
           if (startA && !startB) return -1;
           if (!startA && startB) return 1;
-
-          // Prioritas 2: Urutan Abjad
           return nameA.localeCompare(nameB);
         });
 
@@ -149,16 +144,20 @@ export function useProductForm() {
 
 
 // DESKRIPSI KESELURUHAN FILE:
-// File ini adalah useProductForm.ts, sebuah Composable Function yang bertindak sebagai "Otak Logika" untuk formulir penambahan produk di aplikasi Sinar Pagi POS. File ini memisahkan seluruh aturan bisnis (seperti perhitungan harga grosir ke eceran) dan proses penyimpanan data dari tampilan visual (UI). Dengan menggunakan file ini, formulir produk menjadi cerdas karena mampu memformat angka ribuan secara otomatis saat diketik dan memastikan data yang masuk ke database sudah tervalidasi dengan benar.
+// File ini adalah modul logika formulir produk (useProductForm.ts) yang berfungsi sebagai "otak" di balik pengelolaan data barang pada aplikasi Sinar Pagi. Menggunakan Vue Composable, file ini menangani seluruh siklus hidup data produk, mulai dari inisialisasi formulir, validasi input, hingga sinkronisasi ke database Dexie. Fitur paling krusial di sini adalah sistem "Smart Autocomplete" yang memantau ketikan nama atau pemindaian barcode secara real-time; jika produk sudah terdaftar, sistem akan otomatis mengisi formulir (auto-fill). Selain itu, terdapat logika "Wholesale Splitter" yang secara otomatis membagi harga modal satu pak menjadi harga satuan, memastikan perhitungan margin keuntungan tetap akurat tanpa perlu kalkulator eksternal.
 
 // PENJELASAN FUNGSI TIAP BARIS:
-// Baris 1-2: Mengimpor fungsi dasar Vue (ref, watch, onMounted) untuk reaktivitas dan koneksi database (db) untuk menyimpan data barang.
-// Baris 4: Ekspor fungsi useProductForm; memungkinkan logika formulir ini digunakan kembali di berbagai komponen tanpa menulis ulang kode.
-// Baris 5-9: State Reaktif; menyiapkan variabel untuk status loading (isSaving), daftar kategori, dan variabel 'display' yang khusus digunakan untuk menampilkan format titik ribuan di layar.
-// Baris 11-15: Struktur Data Produk; mendefinisikan objek 'product' dengan nilai standar (default), seperti unit 'pcs', kategori 'Umum', dan ID yang masih kosong.
-// Baris 17-20: Fungsi formatDisplay; menggunakan Regex (Regular Expression) untuk mengubah angka murni (1000) menjadi format tampilan yang mudah dibaca kasir (1.000).
-// Baris 22-34: Fungsi updateNumber (Logika Kalkulator); Jantung dari fitur "Wholesale Calculator". Jika kasir mengisi harga pak/dus (pack_price), fungsi ini secara otomatis menghitung harga modal per biji (unitModal) dengan membagi harga pak dengan isi pak tersebut.
-// Baris 36-47: Fungsi saveProduct; proses pengiriman data ke database. Fungsi ini membuat ID unik otomatis berbasis waktu (SP-...), memastikan nama dan harga sudah terisi, lalu menyimpan data ke tabel 'products'.
-// Baris 42: JSON.parse(JSON.stringify); teknik "Deep Copy" untuk memastikan data yang dikirim ke database adalah data murni tanpa gangguan referensi reaktif Vue.
-// Baris 49: onMounted; mengambil daftar kategori dari database segera setelah formulir dibuka agar pilihan kategori (dropdown) sudah tersedia bagi kasir.
-// Baris 51-54: Return; mengembalikan seluruh data dan fungsi agar bisa ditempelkan dan digunakan oleh file tampilan (ProductForm.vue).
+// Baris 1-2: Impor Dependensi; mengambil fungsi reaktivitas (ref, watch, onMounted) dari Vue dan koneksi database lokal (db).
+// Baris 4: Definisi Composable; membungkus seluruh logika formulir agar bisa digunakan kembali di berbagai komponen UI.
+// Baris 5-10: State UI; mendefinisikan variabel reaktif untuk memantau status penyimpanan (isSaving), daftar kategori, saran produk (suggestions), dan penanda apakah barang yang diinput adalah barang lama (isExistingProduct).
+// Baris 12-14: State Display; variabel string khusus untuk menampilkan format angka ribuan (dengan titik) pada kolom harga agar lebih mudah dibaca manusia.
+// Baris 16-20: Objek Product; skema data utama produk yang mencakup ID unik, gambar, nama, kode, kategori, hingga detail harga grosir (pack_price).
+// Baris 22-25: Fungsi formatDisplay; utilitas untuk mengubah angka mentah menjadi format ribuan (Contoh: 10000 menjadi 10.000) menggunakan regex.
+// Baris 27-40: Fungsi updateNumber; logika inti yang memperbarui nilai numerik produk. Jika harga satu pak (pack_price) diubah, fungsi ini otomatis menghitung harga modal satuan (price_modal) berdasarkan isi per pak (pack_size).
+// Baris 42-52: Fungsi selectProduct; memproses pemilihan produk dari daftar saran. Fungsi ini memindahkan data produk lama ke formulir dan mengaktifkan mode update (isExistingProduct = true).
+// Baris 54-65: Fungsi resetForm; mengembalikan seluruh state produk dan tampilan harga ke kondisi awal (kosong), biasanya dijalankan setelah sukses menyimpan data.
+// Baris 67-86: Watcher Nama Produk; memantau setiap ketikan pada kolom nama. Jika pengguna mengetik, sistem akan mencari kecocokan nama di database, mengurutkannya, dan menampilkan maksimal 8 saran produk serupa.
+// Baris 88-93: Watcher Kode Barcode; memantau input barcode. Jika barcode yang di-scan cocok dengan data lama, sistem akan langsung memicu fungsi selectProduct untuk mengisi data secara otomatis.
+// Baris 95-121: Fungsi saveProduct; logika penyimpanan utama. Melakukan validasi kolom wajib, menghitung akumulasi stok jika barang lama, memberikan ID unik (prefix 'SP-') untuk barang baru, dan menyimpan hasilnya ke IndexedDB melalui Dexie.
+// Baris 123-130: Lifecycle onMounted; melakukan pemuatan data kategori dan seluruh daftar produk dari database segera setelah formulir diakses untuk mendukung fitur pencarian instan.
+// Baris 132-137: Return Value; mengekspos state dan fungsi-fungsi kontrol agar bisa dihubungkan ke elemen HTML pada komponen Vue (Template).

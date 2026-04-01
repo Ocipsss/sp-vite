@@ -15,10 +15,8 @@ export function useDashboard() {
 
   const loadStats = async () => {
     try {
-      const today = new Date().toISOString().split('T')[0];
-      
-      // 1. Ambil Data Transaksi Hari Ini
-      // JURUS PAMUNGKAS: Double Casting as unknown as string
+      const today = new Date().toISOString().split('T')[0] || '';
+
       const todayTrans = await db.transactions
         .where('date' as unknown as string)
         .startsWith(today)
@@ -39,7 +37,6 @@ export function useDashboard() {
         }
       });
 
-      // 2. Ambil Pengeluaran Hari Ini
       const todayExpensesData = await db.expenses
         .where('date' as unknown as string)
         .startsWith(today)
@@ -50,7 +47,6 @@ export function useDashboard() {
         0
       );
 
-      // 3. Stok Produk & Nilai Aset
       const products = await db.products.toArray();
       const kritis = products.filter(p => Number(p.qty || 0) <= 5).length;
       const totalNilaiAset = products.reduce(
@@ -58,7 +54,6 @@ export function useDashboard() {
         0
       );
 
-      // 4. Hitung Total Piutang (Status 'hutang')
       const allHutangTrans = await db.transactions
         .where('status' as unknown as string)
         .equals('hutang')
@@ -69,7 +64,6 @@ export function useDashboard() {
         0
       );
 
-      // Update State
       stats.value = {
         omzet,
         stokKritis: kritis,
@@ -79,7 +73,6 @@ export function useDashboard() {
         pengeluaranHariIni: totalExpenses
       };
 
-      // 5. Top Members
       const members = await db.members.toArray();
       topMembers.value = members
         .sort((a, b) => Number(b.points || 0) - Number(a.points || 0))
@@ -102,20 +95,20 @@ export function useDashboard() {
 
 
 // DESKRIPSI KESELURUHAN FILE:
-// File ini adalah Composable Function (Logic Helper) bernama useDashboard yang berfungsi sebagai "Mesin Pengolah Data" untuk halaman utama aplikasi Sinar Pagi POS. File ini memisahkan logika perhitungan yang rumit dari tampilan visual, bertugas mengambil data mentah dari database lokal (Dexie), melakukan kalkulasi matematika (seperti menghitung laba bersih dan nilai aset), serta menyediakan data yang sudah "matang" untuk ditampilkan di Dashboard. Dengan menggunakan fungsi ini, data keuangan toko selalu diperbarui secara otomatis setiap kali halaman dibuka.
+// File ini adalah modul logika dashboard (useDashboard.ts) yang berfungsi sebagai mesin pengolah data statistik utama untuk aplikasi Sinar Pagi. Menggunakan pola Vue Composable, file ini secara otomatis menarik data mentah dari berbagai tabel database lokal (transaksi, produk, pengeluaran, dan member) lalu mengolahnya menjadi informasi finansial yang siap pakai. Modul ini bertanggung jawab menghitung performa toko secara real-time, mulai dari omzet harian, sisa piutang pelanggan, hingga nilai total aset barang yang ada di gudang, sehingga pemilik toko dapat mengambil keputusan bisnis dengan cepat berdasarkan data akurat.
 
 // PENJELASAN FUNGSI TIAP BARIS:
-// Baris 1-2: Mengimpor fungsi reaktivitas dari Vue (ref, onMounted) dan koneksi database (db) untuk melakukan query data.
-// Baris 4: Ekspor fungsi useDashboard; pola 'composable' yang memungkinkan logika ini digunakan kembali di berbagai tempat jika diperlukan.
-// Baris 5-12: State 'stats'; menyiapkan wadah reaktif untuk menyimpan hasil perhitungan seperti Omzet, Stok Kritis, Piutang, Laba, Nilai Stok, dan Pengeluaran.
-// Baris 17: Fungsi loadStats; sebuah fungsi asinkron (async) yang menjalankan seluruh proses pengambilan dan perhitungan data secara berurutan.
-// Baris 19-21: Menentukan variabel 'today'; mengambil tanggal hari ini dalam format standar (YYYY-MM-DD) sebagai filter utama laporan harian.
-// Baris 24-27: Query Transaksi; mengambil seluruh data penjualan yang terjadi hari ini dari tabel 'transactions'. Penggunaan 'as unknown as string' adalah teknik teknis agar TypeScript tidak memprotes filter pada database.
-// Baris 32-42: Logika Perhitungan Laba; melakukan looping pada setiap transaksi dan setiap barang di dalamnya untuk menghitung selisih harga jual dan harga modal (Laba Kotor).
-// Baris 45-52: Kalkulasi Pengeluaran; menjumlahkan seluruh biaya operasional toko yang dicatat hari ini (seperti biaya listrik, air, atau gaji).
-// Baris 55-60: Analisis Inventaris; menghitung berapa banyak produk yang stoknya hampir habis (<= 5) dan menghitung total nilai aset toko berdasarkan harga modal barang yang tersedia.
-// Baris 63-71: Manajemen Piutang; mencari transaksi yang statusnya masih 'hutang' (Tempo) dan menjumlahkan total tagihan yang belum dibayar oleh pelanggan.
-// Baris 74-81: Update State Akhir; memperbarui variabel 'stats' dengan hasil akhir, termasuk menghitung Laba Bersih (Laba Kotor dikurangi Total Pengeluaran).
-// Baris 84-88: Peringkat Member; mengambil data pelanggan, mengurutkannya berdasarkan poin terbanyak, dan hanya mengambil 10 besar (Top 10) untuk ditampilkan.
-// Baris 95: onMounted; memastikan fungsi loadStats langsung dijalankan secara otomatis begitu kasir membuka halaman Dashboard.
-// Baris 97-101: Return; mengembalikan data 'stats' dan 'topMembers' agar bisa digunakan oleh file Dashboard.vue.
+// Baris 1-2: Impor dependensi; mengambil fungsi reaktivitas Vue (ref, onMounted) dan koneksi database Dexie (db).
+// Baris 4-13: Definisi state stats; variabel reaktif yang menampung objek ringkasan keuangan seperti omzet, stok kritis, total piutang, laba bersih harian, nilai aset stok, dan pengeluaran.
+// Baris 15: Definisi state topMembers; variabel reaktif untuk menyimpan daftar 10 pelanggan dengan poin loyalitas tertinggi.
+// Baris 17-20: Inisialisasi fungsi loadStats; fungsi asinkron utama untuk mengambil dan memproses data dari database. Mendapatkan tanggal hari ini dalam format ISO (YYYY-MM-DD).
+// Baris 22-26: Query Transaksi Hari Ini; mengambil semua data penjualan yang terjadi pada tanggal hari ini dari tabel transactions.
+// Baris 28-40: Logika Hitung Omzet & Laba Kotor; melakukan perulangan (forEach) pada transaksi hari ini untuk menjumlahkan total uang masuk serta menghitung selisih harga jual dan modal per item.
+// Baris 42-50: Query & Hitung Pengeluaran; mengambil data pengeluaran operasional hari ini dan menjumlahkan total nominalnya (totalExpenses).
+// Baris 52-58: Analisa Produk & Aset; mengambil seluruh data produk untuk menghitung jumlah barang yang stoknya di bawah 5 (stokKritis) serta total nilai uang yang mengendap di gudang (nilaiStok).
+// Baris 60-68: Analisa Piutang; melakukan filter pada database untuk menjumlahkan seluruh nilai transaksi yang berstatus 'hutang' atau belum lunas.
+// Baris 70-77: Finalisasi Stats; menggabungkan seluruh hasil perhitungan ke dalam state 'stats', termasuk pengurangan laba kotor dengan biaya pengeluaran untuk mendapatkan laba bersih hari ini.
+// Baris 79-82: Pemeringkatan Member; mengambil seluruh data pelanggan dan mengurutkannya berdasarkan jumlah poin terbanyak untuk menampilkan 10 besar member loyal.
+// Baris 84-86: Error Handling; menangkap dan menampilkan log error ke konsol jika terjadi kegagalan saat pengambilan data dari database.
+// Baris 89: Lifecycle onMounted; memastikan fungsi loadStats langsung berjalan otomatis segera setelah dashboard dibuka oleh pengguna.
+// Baris 91-95: Return Value; mengekspos variabel stats, topMembers, dan fungsi loadStats agar bisa digunakan di dalam komponen UI Dashboard.

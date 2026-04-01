@@ -77,7 +77,6 @@ import BaseButton from "@/common/BaseButton.vue";
 
 const categoryName = ref('');
 
-// LiveQuery Dexie to Observable (Auto-sync UI)
 const listCategories = useObservable(
   (liveQuery(() => db.categories.toArray()) as unknown) as Observable<any[]>
 );
@@ -113,18 +112,18 @@ const deleteCategory = async (id: number | undefined) => {
 
 
 <!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen KategoriProduk.vue yang berfungsi sebagai modul pengelola klasifikasi barang dalam aplikasi Sinar Pagi POS. Komponen ini memungkinkan pemilik toko untuk menambah atau menghapus kategori produk (seperti Snack, Minyak, atau Kurma) guna merapikan inventaris. Keunggulan teknis file ini adalah penggunaan "Live Query", yang berarti daftar kategori di layar akan otomatis bertambah atau berkurang secara instan tanpa perlu memuat ulang halaman (refresh) setiap kali ada perubahan data di database lokal.
+File ini adalah komponen Manajemen Kategori (CategoryManagement.vue) yang berfungsi sebagai pusat pengaturan klasifikasi produk dalam ekosistem Sinar Pagi POS. Komponen ini dirancang dengan antarmuka yang bersih dan minimalis, memungkinkan pemilik toko untuk menambah atau menghapus kategori barang (seperti "Snack", "Minuman", dll) secara instan. Fitur unggulannya adalah penggunaan "Live Query" dari Dexie.js dan RxJS yang membuat daftar kategori bersifat reaktif secara otomatis—artinya, setiap perubahan data di database akan langsung tercermin di layar tanpa perlu memuat ulang halaman (reload), lengkap dengan animasi transisi yang halus untuk pengalaman pengguna yang lebih premium.
 
 PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-6: Header Halaman; menampilkan judul "Manajemen Kategori" dengan gaya tipografi tebal dan deskripsi singkat untuk memberikan konteks navigasi bagi pengguna.
-Baris 8-26: Formulir Input Kategori; area kartu putih yang berisi kolom teks untuk mengetik nama kategori baru. Dilengkapi dengan fungsi '@keyup.enter' agar kasir bisa menekan tombol 'Enter' di keyboard untuk menyimpan data dengan cepat.
-Baris 29-33: Label Status; menampilkan jumlah total kategori yang aktif saat ini secara dinamis (reactive counting).
-Baris 35-51: Daftar Kategori (List); menggunakan 'transition-group' untuk memberikan efek animasi halus saat kategori baru muncul atau kategori lama dihapus. Setiap baris kategori dilengkapi dengan ikon label dan tombol hapus berwarna merah.
-Baris 54-59: Tampilan Kosong (Empty State); bagian ini hanya akan muncul (v-if) jika database kategori benar-benar kosong, memberikan petunjuk visual berupa ikon transparan dan teks "Belum ada kategori".
-Baris 63-68: Indikator Cloud Sync; memberikan kepastian visual kepada pengguna bahwa setiap kategori yang dibuat sedang dipantau oleh sistem sinkronisasi cloud melalui lampu indikator hijau yang berkedip.
-Baris 72-78: Bagian Script; mengimpor fungsi 'liveQuery' dari Dexie dan 'useObservable' dari VueUse. Ini adalah teknologi yang membuat antarmuka (UI) selalu selaras dengan isi database secara real-time.
-Baris 80: Variabel categoryName; menampung teks yang sedang diketik pengguna di kolom input.
-Baris 83-86: liveQuery Logic; memerintahkan aplikasi untuk terus memantau tabel 'categories' di database. Jika ada perubahan data, variabel 'listCategories' akan otomatis diperbarui.
-Baris 88-98: Fungsi addCategory; logika untuk menyimpan kategori baru ke database. Terdapat pengecekan (trim) untuk memastikan nama kategori tidak kosong sebelum disimpan.
-Baris 100-107: Fungsi deleteCategory; memberikan konfirmasi keamanan (pop-up confirm) sebelum menghapus kategori dari sistem untuk mencegah ketidaksengajaan.
-Baris 111-115: CSS Transition; mengatur animasi gerak 'geser ke kiri' saat data masuk dan 'geser ke kanan' saat data dihapus, memberikan pengalaman pengguna yang lebih elegan dan responsif. -->
+Baris 1-7: Header Halaman; menampilkan judul utama "Manajemen Kategori" dan sub-teks instruksi dengan tipografi uppercase yang konsisten dengan gaya desain retail Sinar Pagi.
+Baris 9-27: Area Input Kategori; wadah kartu putih (card) yang berisi field teks untuk mengetik nama kategori baru. Mendukung aksi tekan tombol "Enter" (keyup.enter) atau klik tombol "Plus" untuk menyimpan data.
+Baris 29-33: Label Status; menampilkan jumlah total kategori yang aktif saat ini secara dinamis berdasarkan panjang array data.
+Baris 35-51: Iterasi Daftar Kategori (v-for); merender setiap kategori dalam sebuah baris yang dilengkapi dengan ikon tag biru dan tombol hapus berwarna merah. Dibungkus dengan <transition-group> untuk memberikan efek animasi masuk/keluar.
+Baris 53-59: State Kosong (Empty State); menampilkan ilustrasi ikon tag yang transparan dan teks miring jika database kategori masih kosong, memberikan panduan visual bagi pengguna baru.
+Baris 62-67: Indikator Cloud Sync; menampilkan status sinkronisasi awan dengan titik hijau berkedip (pulse) untuk memberi kepastian bahwa data tersimpan dengan aman di sistem cloud.
+Baris 71-76: Impor Modul; mengambil fungsi reaktivitas Vue, koneksi database Dexie, dan pustaka RxJS/VueUse untuk mengaktifkan pemantauan data secara live (liveQuery).
+Baris 78: State categoryName; variabel reaktif untuk menampung teks yang sedang diketik pengguna di kolom input kategori.
+Baris 80-82: Variable listCategories; menggunakan useObservable untuk memantau tabel 'categories' di database secara terus-menerus dan memperbarui UI secara otomatis saat data berubah.
+Baris 84-95: Fungsi addCategory; logika asinkron untuk memvalidasi input (tidak boleh kosong) dan menyimpan nama kategori baru ke database lokal sebelum mengosongkan kembali kolom input.
+Baris 97-104: Fungsi deleteCategory; memproses penghapusan data berdasarkan ID unik kategori dengan tambahan proteksi konfirmasi (pop-up) untuk mencegah penghapusan yang tidak sengaja.
+Baris 108-112: Animasi CSS; mendefinisikan transisi '.list' untuk memberikan efek geser (slide) dan memudar (fade) saat sebuah kategori ditambah atau dihapus dari daftar. -->

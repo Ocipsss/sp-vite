@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden transition-all duration-300"
+    class="bg-white rounded-4xl border border-slate-100 shadow-sm overflow-hidden transition-all duration-300"
     :class="isEditing ? 'ring-2 ring-blue-500 shadow-xl scale-[1.02] z-10' : ''"
   >
     <div class="p-5 flex justify-between items-start">
@@ -62,7 +62,7 @@
             <label class="text-[8px] font-black text-slate-400 uppercase tracking-widest block mb-2 ml-1">Metode</label>
             <div class="relative flex items-center">
               <select 
-                @change="updatePayment($event.target.value)" 
+                @change="handlePaymentChange" 
                 class="w-full h-11 bg-white rounded-xl border border-slate-100 px-3 text-[9px] font-black uppercase outline-none appearance-none shadow-sm"
               >
                 <option :selected="transaction.paymentMethod === 'Tunai'" value="Tunai">CASH</option>
@@ -123,6 +123,14 @@ const updateStatus = async (status: string) => {
   }
 };
 
+// Fungsi Baru untuk menangani perubahan pembayaran dengan type safety
+const handlePaymentChange = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  if (target) {
+    updatePayment(target.value);
+  }
+};
+
 const updatePayment = async (paymentMethod: string) => {
   try {
     await db.table('transactions').update(props.transaction.id, { paymentMethod });
@@ -155,7 +163,7 @@ const formatDateTime = (date: string) => {
 <style scoped>
 .slide-down-enter-active, .slide-down-leave-active {
   transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  max-height: 250px; /* Batas tinggi untuk animasi */
+  max-height: 250px;
 }
 .slide-down-enter-from, .slide-down-leave-to {
   max-height: 0;
@@ -163,3 +171,22 @@ const formatDateTime = (date: string) => {
   transform: translateY(-8px);
 }
 </style>
+
+
+
+<!-- DESKRIPSI KESELURUHAN FILE:
+File ini adalah komponen kartu transaksi individual (TransactionItem.vue) yang berfungsi sebagai elemen visual utama dalam daftar riwayat penjualan Sinar Pagi. Komponen ini memiliki desain "expandable" yang sangat interaktif; dalam keadaan tertutup, ia menampilkan ringkasan nota seperti ID, waktu, total harga, dan status lunas/hutang. Namun, saat tombol opsi ditekan, kartu akan meluas (slide-down) untuk membuka panel kontrol administratif yang memungkinkan kasir mengubah status pembayaran, mengganti metode bayar, mencetak ulang struk, hingga melakukan penghapusan data secara permanen dari database lokal Dexie.
+
+PENJELASAN FUNGSI TIAP BARIS:
+Baris 1-6: Pembungkus Kartu; menggunakan gaya rounded-4xl yang modern dengan efek transisi shadow dan scale saat dalam mode edit untuk memberikan fokus visual pada item yang sedang dikelola.
+Baris 7-23: Header Kartu; menampilkan ikon nota, nomor ID nota yang dipersingkat (6 karakter terakhir), serta stempel waktu transaksi yang diformat sesuai standar waktu Indonesia.
+Baris 25-44: Area Informasi Harga & Tombol; menampilkan total belanja dalam format Rupiah yang mencolok (italic black) serta tombol shortcut untuk mencetak ulang struk (reprint) dan membuka panel opsi.
+Baris 46-77: Panel Edit (v-if="isEditing"); area tersembunyi yang akan muncul dengan animasi geser ke bawah. Berisi kontrol untuk mengubah status nota (Lunas/Hutang) dan dropdown untuk mengganti metode pembayaran (Cash/QRIS/Tempo).
+Baris 78-83: Tombol Hapus Permanen; tombol peringatan berwarna merah untuk menghapus transaksi dari database dengan pengingat bahwa stok barang tidak akan kembali otomatis (manual adjustment).
+Baris 86-104: Bar Ringkasan Bawah; hanya muncul saat kartu tertutup, memberikan informasi cepat mengenai status pembayaran (badge warna), metode bayar, dan jumlah total jenis produk yang dibeli.
+Baris 108-112: Definisi Props & Emits; menerima data transaksi tunggal dan status editing dari komponen induk, serta menyediakan saluran komunikasi untuk memicu refresh data atau print.
+Baris 114-121: Fungsi updateStatus; melakukan pembaruan data asinkron pada database Dexie untuk mengubah status transaksi (misal: dari Hutang menjadi Lunas) dan memberi tahu induk untuk memperbarui tampilan.
+Baris 123-138: Fungsi updatePayment; menangani perubahan metode pembayaran melalui elemen select dengan dukungan type safety untuk memastikan data yang disimpan ke database tetap valid.
+Baris 140-151: Fungsi confirmDelete; menjalankan prosedur keamanan berupa jendela konfirmasi (confirm) sebelum menghapus data transaksi secara fisik dari memori perangkat.
+Baris 153-157: Fungsi formatDateTime; utilitas internal untuk mengubah string tanggal mentah menjadi format yang lebih manusiawi (Contoh: 01 Apr, 14:30).
+Baris 161-171: Animasi CSS (slide-down); menggunakan transisi kurva bezier untuk menciptakan gerakan membuka panel edit yang terasa halus, elastis, dan responsif. -->
