@@ -27,11 +27,11 @@
               class="flex-1 bg-transparent border-none outline-none font-bold text-slate-700 p-0 placeholder:font-medium" 
               placeholder="Cari atau ketik nama..."
               @focus="() => { if(suggestions.length > 0) showSuggestions = true }"
-              @blur="() => { setTimeout(() => showSuggestions = false, 200) }"
+              @blur="onBlurName"
             >
           </div>
 
-          <div v-if="showSuggestions" class="absolute left-0 right-0 top-[76px] bg-white border border-slate-100 shadow-2xl rounded-2xl z-[100] overflow-hidden divide-y divide-slate-50 max-h-64 overflow-y-auto">
+          <div v-if="showSuggestions" class="absolute left-0 right-0 top-19 bg-white border border-slate-100 shadow-2xl rounded-2xl z-100 overflow-hidden divide-y divide-slate-50 max-h-64 overflow-y-auto">
             <div 
               v-for="s in suggestions" 
               :key="s.id" 
@@ -177,15 +177,20 @@ const handleScanResult = (result: { code: string, product: any }) => {
 };
 
 
+const onBlurName = () => {
+  setTimeout(() => {
+    showSuggestions.value = false;
+  }, 200);
+};
+
 const selectAll = (e: FocusEvent) => {
   const target = e.target as HTMLInputElement;
-  setTimeout(() => {
+  window.setTimeout(() => {
     target.select();
     if (window.innerWidth < 768) target.setSelectionRange(0, 9999);
   }, 50);
 };
 </script>
-<<<<<<< HEAD
 
 <style scoped>
 .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -210,5 +215,3 @@ Baris 88-95: Tombol Simpan; tombol aksi utama yang lebar (h-16). Memiliki status
 Baris 100-117: Bagian Script Setup; mengimpor logika pusat (useProductForm) dan sub-komponen modular lainnya. Memisahkan logika perhitungan dari tampilan agar kode lebih mudah dikelola.
 Baris 120-130: Fungsi selectAll; sebuah fitur kenyamanan pengguna (UX) di mana seluruh teks di dalam kotak input akan langsung terblokir (tersorot) saat disentuh. Hal ini memudahkan kasir untuk langsung menimpa angka lama tanpa harus menghapusnya satu per satu menggunakan tombol backspace.
 Baris 133-136: CSS Scoped; pengaturan gaya tambahan untuk menghilangkan batang penggulung (scrollbar) agar antarmuka terasa lebih seperti aplikasi native (Android/iOS) daripada situs web biasa. -->
-=======
->>>>>>> e7ff259861f543d4be329ee9b74efd1fa7e8e4ee
