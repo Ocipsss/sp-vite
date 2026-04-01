@@ -10,9 +10,10 @@
 
     <div class="flex-1">
       <GlobalSearch 
-        v-if="!isNotOnMainPages"
+        v-if="showSearch"
         v-model="cart.searchQuery" 
-        placeholder="Cari barang..." 
+        placeholder="Cari sesuatu..." 
+        :hide-suggestions="route.name === 'Stock Monitor' || route.name === 'Riwayat Transaksi'"
       />
       
       <div v-else class="px-2">
@@ -24,7 +25,16 @@
 
     <div class="flex items-center">
       <button 
-        v-if="isNotOnMainPages"
+        v-if="showScanner"
+        type="button"
+        @click="cart.toggleScanner(true)"
+        class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-blue-200 shrink-0"
+      >
+        <i class="ri-qr-scan-2-line text-xl"></i>
+      </button>
+
+      <button 
+        v-else
         type="button"
         @click="goToPenjualan"
         class="w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-emerald-200 shrink-0 relative"
@@ -36,15 +46,6 @@
         >
           {{ cart.items.length }}
         </span>
-      </button>
-
-      <button 
-        v-else
-        type="button"
-        @click="cart.toggleScanner(true)"
-        class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-blue-200 shrink-0"
-      >
-        <i class="ri-qr-scan-2-line text-xl"></i>
       </button>
     </div>
   </header>
@@ -63,10 +64,16 @@ const cart = useCartStore();
 const route = useRoute();
 const router = useRouter();
 
-const isNotOnMainPages = computed(() => {
-  const currentName = route.name as string;
-  const mainPages = ['Penjualan', 'Daftar Produk'];
-  return !mainPages.includes(currentName);
+// 1. Logika Halaman mana saja yang menampilkan Searchbar
+const showSearch = computed(() => {
+  const pages = ['Penjualan', 'Daftar Produk', 'Stock Monitor', 'Riwayat Transaksi'];
+  return pages.includes(route.name as string);
+});
+
+// 2. Logika Halaman mana saja yang BOLEH menampilkan tombol Scanner
+const showScanner = computed(() => {
+  const pages = ['Penjualan', 'Daftar Produk'];
+  return pages.includes(route.name as string);
 });
 
 const handleToggle = () => {
@@ -77,16 +84,6 @@ const goToPenjualan = () => {
   router.push({ name: 'Penjualan' });
 };
 </script>
-
-<style scoped>
-.animate-fade-in {
-  animation: fadeIn 0.2s ease-out;
-}
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.5); }
-  to { opacity: 1; transform: scale(1); }
-}
-</style>
 
 
 

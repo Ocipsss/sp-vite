@@ -57,6 +57,7 @@ import { useCartStore } from '@/stores/cart';
 const props = defineProps<{
   modelValue: string;
   placeholder?: string;
+  hideSuggestions?: boolean;
 }>();
 
 const emit = defineEmits(['update:modelValue']);
@@ -72,7 +73,10 @@ const {
 } = useProductSearch();
 
 const showDropdown = computed(() => {
-  return isFocused.value && suggestions.value.length > 0 && props.modelValue.length > 0;
+  return !props.hideSuggestions && 
+         isFocused.value && 
+         suggestions.value.length > 0 && 
+         props.modelValue.length > 0;
 });
 
 const handleInput = (e: Event) => {
