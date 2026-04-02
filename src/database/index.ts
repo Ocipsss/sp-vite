@@ -1,5 +1,4 @@
 import Dexie, { type Table } from 'dexie';
-import { DEXIE_SCHEMA } from './schema';
 import type { 
   Product, 
   ProductPackage, 
@@ -9,6 +8,20 @@ import type {
   ServiceItem,
   ID 
 } from '@/types';
+
+export const DEXIE_SCHEMA = {
+  products: 'id, name, code, category, updatedAt',
+  product_packages: 'id, name',
+  categories: '++id, name',
+  transactions: 'id, timestamp, date, memberId, status', 
+  members: 'id, name, phone',
+  expenses: 'id, timestamp, date, category', 
+  services: 'id, name',
+  digital_transactions: 'id, timestamp',
+  settings: 'id'
+};
+
+export const DB_TABLES = Object.keys(DEXIE_SCHEMA);
 
 export class SinarPagiDB extends Dexie {
   products!: Table<Product>;
@@ -23,7 +36,7 @@ export class SinarPagiDB extends Dexie {
 
   constructor() {
     super('SinarPagiDB');
-    this.version(19).stores(DEXIE_SCHEMA);
+    this.version(22).stores(DEXIE_SCHEMA);
   }
 }
 

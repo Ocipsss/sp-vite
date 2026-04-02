@@ -4,7 +4,7 @@ import './style.css'
 import 'remixicon/fonts/remixicon.css'
 import App from './App.vue'
 import router from './router'
-import { auth } from './api/firebase' // Import auth dari file tadi
+import { auth } from './api/firebase'
 import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { setupSyncHooks, startPullSync } from './api/sync'
 import { db } from './database'

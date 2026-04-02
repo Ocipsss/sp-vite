@@ -1,7 +1,7 @@
 import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
 import { fdb } from "./firebase";
 import { db } from "@/database";
-import { DB_TABLES } from "@/database/schema"; // Import daftar tabel pusat
+import { DB_TABLES } from "@/database";
 
 let isSyncing = false;
 
