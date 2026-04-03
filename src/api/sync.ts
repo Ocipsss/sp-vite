@@ -1,15 +1,19 @@
-import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
+import { ref as fRef, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
 import { fdb } from "./firebase";
-import { db } from "@/database";
-import { DB_TABLES } from "@/database";
+import { db, DB_TABLES } from "@/database";
 import { deepCopy } from "@/utils/formatters";
+import { useSyncStore } from "@/stores/sync";
 
-let isSyncing = false;
+// Helper agar tidak perlu memanggil useSyncStore berkali-kali di dalam loop
+const getSyncStore = () => useSyncStore();
 
 const syncToCloud = async (table: string, id: string | number, data: any) => {
-  if (isSyncing) return;
+  const syncStore = getSyncStore();
+  
+  if (syncStore.isSyncing) return;
+
   try {
-    const itemRef = ref(fdb, `${table}/${id}`);
+    const itemRef = fRef(fdb, `${table}/${id}`);
     if (data === null) {
       await remove(itemRef);
     } else {
@@ -41,8 +45,10 @@ export const setupSyncHooks = () => {
 };
 
 export const startPullSync = () => {
+  const syncStore = getSyncStore();
+
   DB_TABLES.forEach(tableName => {
-    const tableRef = ref(fdb, tableName);
+    const tableRef = fRef(fdb, tableName);
     const table = (db as any)[tableName];
     if (!table) return;
 
@@ -59,13 +65,13 @@ export const startPullSync = () => {
       const data = prepareData(snapshot);
       if (data) {
         try {
-          isSyncing = true; 
+          syncStore.setSyncStatus(true); // LOCK
           await table.put(data); 
           console.log(`[SYNC] Pulling ${tableName}: ${data.name || data.id}`);
         } catch (err) {
           console.error(`[SYNC ERROR] Gagal simpan ${tableName}:`, err);
         } finally {
-          isSyncing = false;
+          syncStore.setSyncStatus(false); // UNLOCK
         }
       }
     });
@@ -73,18 +79,24 @@ export const startPullSync = () => {
     onChildChanged(tableRef, async (snapshot) => {
       const data = prepareData(snapshot);
       if (data) {
-        isSyncing = true; 
-        await table.put(data); 
-        isSyncing = false;
+        try {
+          syncStore.setSyncStatus(true);
+          await table.put(data); 
+        } finally {
+          syncStore.setSyncStatus(false);
+        }
       }
     });
 
     onChildRemoved(tableRef, async (snapshot) => {
       const id = snapshot.key;
       if (id) {
-        isSyncing = true; 
-        await table.delete(id); 
-        isSyncing = false;
+        try {
+          syncStore.setSyncStatus(true);
+          await table.delete(id); 
+        } finally {
+          syncStore.setSyncStatus(false);
+        }
       }
     });
   });
