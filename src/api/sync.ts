@@ -4,7 +4,6 @@ import { db, DB_TABLES } from "@/database";
 import { deepCopy } from "@/utils/formatters";
 import { useSyncStore } from "@/stores/sync";
 
-// Helper agar tidak perlu memanggil useSyncStore berkali-kali di dalam loop
 const getSyncStore = () => useSyncStore();
 
 const syncToCloud = async (table: string, id: string | number, data: any) => {
@@ -65,13 +64,13 @@ export const startPullSync = () => {
       const data = prepareData(snapshot);
       if (data) {
         try {
-          syncStore.setSyncStatus(true); // LOCK
+          syncStore.setSyncStatus(true);
           await table.put(data); 
           console.log(`[SYNC] Pulling ${tableName}: ${data.name || data.id}`);
         } catch (err) {
           console.error(`[SYNC ERROR] Gagal simpan ${tableName}:`, err);
         } finally {
-          syncStore.setSyncStatus(false); // UNLOCK
+          syncStore.setSyncStatus(false);
         }
       }
     });

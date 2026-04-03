@@ -18,9 +18,6 @@ export const truncateText = (text: string, limit: number = 20): string => {
   return text.length > limit ? text.substring(0, limit) + "..." : text;
 };
 
-/**
- * 2. NUMERIC & CURRENCY
- */
 export const formatRupiah = (val: number | string): string => {
   return new Intl.NumberFormat('id-ID', { 
     style: 'currency', 
@@ -41,9 +38,6 @@ export const parseRawNumber = (val: any): number => {
   return parseInt(val.replace(/\D/g, ""), 10) || 0;
 };
 
-/**
- * 3. BUSINESS LOGIC (POS)
- */
 export const formatTransactionStatus = (status: string): string => {
   if (!status) return "-";
   const statusMap: Record<string, string> = {
@@ -75,9 +69,6 @@ export const formatPoints = (val: number | string): string => {
   return (Number(val) || 0).toLocaleString('id-ID') + " Pts";
 };
 
-/**
- * 4. SYSTEM UTILS
- */
 export const formatDateTime = (date: string | Date): string => {
   if (!date) return "-";
   try {

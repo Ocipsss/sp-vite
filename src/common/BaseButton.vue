@@ -49,21 +49,3 @@ const sizeClasses = computed(() => {
   }
 });
 </script>
-
-
-
-<!-- 
-DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen BaseButton (Atom) yang bersifat reusable (dapat digunakan kembali) untuk seluruh aplikasi Sinar Pagi. Komponen ini berfungsi sebagai pembungkus elemen tombol standar dengan sistem styling dinamis menggunakan Tailwind CSS. Mendukung berbagai varian warna, ukuran, status loading dengan animasi, serta penempatan ikon otomatis agar tampilan antarmuka (UI) tetap konsisten dan responsif di perangkat mobile.
-
-PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-17: Struktur template tombol yang menggunakan binding atribut untuk tipe data, status non-aktif (disabled), dan pengiriman event klik ke komponen induk.
-Baris 6-12: Penerapan kelas CSS dinamis yang menggabungkan gaya dasar (seperti efek tekan active:scale-95) dengan hasil perhitungan logika (varian warna, ukuran, dan lebar penuh).
-Baris 14-15: Logika tampilan ikon yang secara otomatis menampilkan animasi berputar (loader) saat proses loading aktif, atau menampilkan ikon kustom jika didefinisikan.
-Baris 16: Penggunaan tag slot untuk memberikan fleksibilitas konten di dalam tombol, baik berupa teks maupun elemen HTML lainnya.
-Baris 20-21: Bagian skrip setup menggunakan TypeScript dan mengambil fungsi computed dari Vue untuk optimasi reaktivitas.
-Baris 23-31: Pendefinisian Props sebagai parameter masukan yang mengatur perilaku tombol seperti jenis (button/submit), pilihan warna, ukuran, hingga status boolean (disabled/loading/block).
-Baris 33: Deklarasi pengiriman event (emit) agar komponen induk dapat menangkap aksi klik dari pengguna.
-Baris 35-43: Fungsi computed variantClasses yang menentukan skema warna latar belakang dan teks berdasarkan pilihan varian (Primary, Secondary, Danger, atau Ghost).
-Baris 45-51: Fungsi computed sizeClasses yang mengatur besaran padding, radius sudut (border-radius), dan ukuran font agar sesuai dengan skala desain yang diinginkan. 
--->

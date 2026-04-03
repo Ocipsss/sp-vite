@@ -34,16 +34,3 @@ export const MENU_GROUPS = [
     ]
   }
 ];
-
-
-
-// DESKRIPSI KESELURUHAN FILE:
-// File ini adalah konstanta konfigurasi Menu (Menu Configuration) yang berfungsi untuk menyusun struktur navigasi pada Sidebar aplikasi Sinar Pagi POS. Data di dalam file ini diatur dalam bentuk array objek yang dikelompokkan (grouped), sehingga mempermudah proses perulangan (looping) di komponen UI. Setiap item menu memiliki properti nama untuk label dan ikon dari pustaka Remix Icon, yang memastikan tampilan antarmuka tetap rapi, terorganisir, dan mudah dikelola jika di masa depan ada penambahan fitur baru.
-
-// PENJELASAN FUNGSI TIAP BARIS:
-// Baris 1: Ekspor konstanta MENU_GROUPS sebagai array utama yang menampung seluruh kelompok menu aplikasi.
-// Baris 2-8: Grup Menu 1 (Navigasi Utama); berisi menu inti untuk operasional harian seperti Dashboard, Kasir (Penjualan), dan Layanan Digital.
-// Baris 10-17: Grup Menu 2 (Aktivitas & Keuangan); mengelompokkan fitur pemantauan seperti riwayat transaksi, monitor stok barang secara real-time, serta pencatatan piutang dan pengeluaran toko.
-// Baris 19-29: Grup Menu 3 (Manajemen Data); berisi daftar menu untuk pengelolaan database (Master Data) mulai dari produk, kategori, harga paket/grosir, hingga manajemen data jasa, member, dan akun kasir.
-// Baris 31-38: Grup Menu 4 (Laporan & Sistem); mengelompokkan fitur analisis keuangan seperti laporan harian, perhitungan laba rugi, arus kas (cash flow), serta menu pengaturan sistem aplikasi.
-// Struktur Objek: Menggunakan pola { items: [...] } agar komponen Sidebar dapat dengan mudah menyisipkan garis pemisah (divider) secara otomatis di antara kelompok-kelompok menu tersebut.
