@@ -86,7 +86,7 @@ export const useCartStore = defineStore('cart', () => {
     }
   };
 
-  const processCheckout = async () => {
+    const processCheckout = async () => {
     const transactionId = generateUID();
     const now = new Date();
     const transactionData: Transaction = {
@@ -103,20 +103,22 @@ export const useCartStore = defineStore('cart', () => {
     };
 
     try {
-      await db.transactions.add(transactionData);
+      await db.transaction('rw', [db.transactions, db.products], async () => {
+        await db.transactions.add(transactionData);
 
-      for (const item of items.value) {
-        const p = await db.products.get(item.id);
-        if (p) {
-          const multiplier = item.qty_reduce || 1;
-          const totalReduce = item.qty * multiplier;
-          
-          await db.products.update(item.id, { 
-            qty: p.qty - totalReduce,
-            updatedAt: now.toISOString() 
-          });
+        for (const item of items.value) {
+          const p = await db.products.get(item.id);
+          if (p) {
+            const multiplier = item.qty_reduce || 1;
+            const totalReduce = item.qty * multiplier;
+
+            await db.products.update(item.id, {
+              qty: p.qty - totalReduce,
+              updatedAt: now.toISOString()
+            });
+          }
         }
-      }
+      });
 
       resetCart();
       return transactionId;
