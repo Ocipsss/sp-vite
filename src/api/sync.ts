@@ -2,10 +2,10 @@ import { ref, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "
 import { fdb } from "./firebase";
 import { db } from "@/database";
 import { DB_TABLES } from "@/database";
+import { deepCopy } from "@/utils/formatters";
 
 let isSyncing = false;
 
-// --- 1. LOGIKA PUSH: DARI LOKAL KE CLOUD ---
 const syncToCloud = async (table: string, id: string | number, data: any) => {
   if (isSyncing) return;
   try {
@@ -13,7 +13,7 @@ const syncToCloud = async (table: string, id: string | number, data: any) => {
     if (data === null) {
       await remove(itemRef);
     } else {
-      const cleanData = JSON.parse(JSON.stringify(data));
+      const cleanData = deepCopy(data);
       await set(itemRef, cleanData);
     }
   } catch (e) {
@@ -22,7 +22,6 @@ const syncToCloud = async (table: string, id: string | number, data: any) => {
 };
 
 export const setupSyncHooks = () => {
-  // Menggunakan DB_TABLES dari schema.ts
   DB_TABLES.forEach((tableName) => {
     const table = (db as any)[tableName];
     if (!table) return;
@@ -41,9 +40,7 @@ export const setupSyncHooks = () => {
   });
 };
 
-// --- 2. LOGIKA PULL: DARI CLOUD KE LOKAL ---
 export const startPullSync = () => {
-  // Menggunakan DB_TABLES dari schema.ts
   DB_TABLES.forEach(tableName => {
     const tableRef = ref(fdb, tableName);
     const table = (db as any)[tableName];

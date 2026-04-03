@@ -1,8 +1,5 @@
 import { TRANSACTION_STATUS } from '../constants/app';
 
-/**
- * 1. UI HELPERS
- */
 export const highlightText = (text: string, query: string): string => {
   const search = query.trim();
   if (!search) return text;
