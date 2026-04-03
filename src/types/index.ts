@@ -24,7 +24,6 @@ export interface Product {
   pack_price?: number;
   pack_size?: number;
   wholesale_configs?: WholesaleConfig[];
-  
   updatedAt: ISODataString;
 }
 
@@ -36,9 +35,15 @@ export interface ProductPackage {
   price_sell: number;
 }
 
-export interface CartItem extends Product {
+export interface CartItem {
   cartId: ID;
+  id: ID;
+  name: string;
+  code: string;
   qty: number;
+  unit: string;
+  price_modal: number;
+  price_sell: number;
   extraCharge: number;
   extraChargeQty: number;
   extraChargeName?: string;
