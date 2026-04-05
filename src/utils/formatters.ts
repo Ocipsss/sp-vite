@@ -38,16 +38,23 @@ export const parseRawNumber = (val: any): number => {
   return parseInt(val.replace(/\D/g, ""), 10) || 0;
 };
 
+
 export const formatTransactionStatus = (status: string): string => {
   if (!status) return "-";
+  
   const statusMap: Record<string, string> = {
     [TRANSACTION_STATUS.SUCCESS]: 'LUNAS',
-    [TRANSACTION_STATUS.PENDING]: 'PROSES',
+    [TRANSACTION_STATUS.PENDING]: 'TEMPO',
     [TRANSACTION_STATUS.CANCELED]: 'BATAL',
-    'tempo': 'JATUH TEMPO',
-    'hutang': 'PIUTANG',
-    'lunas': 'LUNAS'
+    
+    'partial': 'CICILAN',
+    'overdue': 'JATUH TEMPO',
+    'unpaid': 'BELUM LUNAS',
+    'paid': 'LUNAS',
+    'tempo': 'TEMPO',
+    'hutang': 'PIUTANG'
   };
+  
   return statusMap[status.toLowerCase()] || status.toUpperCase();
 };
 
