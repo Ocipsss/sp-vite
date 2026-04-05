@@ -1,0 +1,338 @@
+src/components/pages/daftar-produk/DaftarProduk.vue:
+<template>
+  <div class="min-h-full bg-slate-50">
+    <div class="flex flex-col gap-3 px-4 pt-4 pb-48">
+      <ProductItem 
+        v-for="p in filteredProducts" 
+        :key="p.id" 
+        :product="p" 
+        @click="openDetail" 
+      />
+
+      <div v-if="filteredProducts.length === 0" class="py-20 text-center opacity-40">
+        <i class="ri-archive-line text-4xl mb-2 block"></i>
+        <p class="text-[10px] font-black uppercase tracking-widest">Tidak ada data ditemukan</p>
+      </div>
+    </div>
+
+    <ProductDetailModal 
+      v-if="isDetailModalOpen" 
+      :product="selectedProduct" 
+      @close="isDetailModalOpen = false"
+      @edit="openEdit"
+      @delete="handleDelete"
+    />
+
+    <ProductEditModal 
+      v-if="isEditModalOpen" 
+      :product="selectedProduct"
+      :categories="listCategories"
+      @close="isEditModalOpen = false"
+      @save="handleUpdate"
+    />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue';
+import { db } from "@/database"; 
+import { useCartStore } from "@/stores/cart";
+import ProductItem from "./ProductItem.vue";
+import ProductDetailModal from "./ProductDetailModal.vue";
+import ProductEditModal from "./ProductEditModal.vue";
+import type { Product } from "@/types";
+
+const cart = useCartStore();
+const products = ref<Product[]>([]);
+const listCategories = ref<any[]>([]);
+
+const isEditModalOpen = ref(false);
+const isDetailModalOpen = ref(false);
+const selectedProduct = ref<Product | null>(null);
+
+const filteredProducts = computed(() => {
+  const query = (cart.searchQuery || "").toLowerCase().trim();
+  if (!query) return products.value;
+  return products.value.filter(p => 
+    p.name.toLowerCase().includes(query) || (p.code && p.code.toLowerCase().includes(query))
+  );
+});
+
+const loadData = async () => {
+  products.value = await db.table('products').orderBy('name').toArray();
+  listCategories.value = await db.table('categories').toArray();
+};
+
+const openDetail = (p: Product) => {
+  selectedProduct.value = p;
+  isDetailModalOpen.value = true;
+};
+
+const openEdit = (p: Product) => {
+  selectedProduct.value = p;
+  isDetailModalOpen.value = false;
+  isEditModalOpen.value = true;
+};
+
+const handleUpdate = async (updatedProduct: Product) => {
+  try {
+    await db.table('products').put({
+      ...updatedProduct,
+      updatedAt: new Date().toISOString()
+    });
+    isEditModalOpen.value = false;
+    await loadData();
+  } catch (err) {
+    console.error("Update failed:", err);
+  }
+};
+
+const handleDelete = async (id: string) => {
+  if (confirm("Hapus produk ini secara permanen?")) {
+    await db.table('products').delete(id);
+    isDetailModalOpen.value = false;
+    await loadData();
+  }
+};
+
+const handleOpenDetailEvent = (e: CustomEvent) => {
+  const p = products.value.find(item => item.id === e.detail);
+  if (p) openDetail(p);
+};
+
+onMounted(() => {
+  loadData();
+  window.addEventListener('open-product-detail', handleOpenDetailEvent as EventListener);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('open-product-detail', handleOpenDetailEvent as EventListener);
+});
+</script>
+
+
+
+
+
+src/components/pages/daftar-produk/ProductDetilModal.vue:
+<template>
+  <div class="fixed inset-0 z-110 flex items-end justify-center p-4 bg-slate-900/60 backdrop-blur-sm" @click.self="$emit('close')">
+    <div class="bg-white w-full max-w-md rounded-[2.5rem] p-6 animate-slide-up shadow-2xl">
+      <div class="flex justify-center mb-4"><div class="w-12 h-1.5 bg-slate-100 rounded-full"></div></div>
+      
+      <div v-if="product" class="text-center mb-6">
+          <div class="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-3 overflow-hidden border border-slate-50">
+              <img v-if="product.image" :src="product.image" class="w-full h-full object-cover">
+              <i v-else class="ri-shopping-bag-3-line text-4xl text-blue-500"></i>
+          </div>
+          <h2 class="text-lg font-black text-slate-800 uppercase italic leading-none">{{ product.name }}</h2>
+          <div class="flex justify-center gap-2 mt-3">
+              <span class="px-3 py-1 bg-slate-100 rounded-full text-[9px] font-black text-slate-500 uppercase">{{ product.category || 'Tanpa Kategori' }}</span>
+              <span class="px-3 py-1 bg-blue-100 rounded-full text-[9px] font-black text-blue-600 uppercase">{{ product.code || 'Tanpa Barcode' }}</span>
+          </div>
+      </div>
+
+      <div v-if="product" class="grid grid-cols-2 gap-4 mb-8">
+          <div class="bg-slate-50 p-4 rounded-3xl border border-slate-100">
+              <div class="text-[9px] font-black text-slate-400 uppercase mb-1">Stok & Satuan</div>
+              <div class="text-base font-black text-slate-800">{{ product.qty }} <small class="text-[10px] font-bold uppercase opacity-50">{{ product.unit }}</small></div>
+          </div>
+          <div class="bg-blue-600 p-4 rounded-3xl shadow-lg shadow-blue-100 text-right">
+              <div class="text-[9px] font-black text-white/60 uppercase mb-1">Harga Jual</div>
+              <div class="text-base font-black text-white">{{ formatRupiah(product.price_sell) }}</div>
+          </div>
+      </div>
+
+      <div class="flex gap-3">
+        <BaseButton variant="danger" block size="lg" label="HAPUS" @click="$emit('delete', product?.id)" />
+        <BaseButton variant="primary" block size="lg" label="EDIT DATA" @click="$emit('edit', product)" />
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { formatRupiah } from "@/utils/formatters";
+import BaseButton from "@/common/BaseButton.vue";
+import type { Product } from "@/types";
+
+defineProps<{ product: Product | null }>();
+defineEmits(['close', 'edit', 'delete']);
+</script>
+
+
+
+
+
+src/components/pages/daftar-produk/ProductEditModal.vue:
+<template>
+  <div :class="ui.modalOverlay" @click.self="$emit('close')">
+    <div :class="ui.modalContent">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="font-black text-slate-800 uppercase tracking-widest text-xs">Update Produk</h3>
+        <button @click="$emit('close')" :class="ui.closeBtn">
+          <i class="ri-close-line text-xl"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label :class="ui.label">Nama Produk</label>
+          <input v-model="form.name" type="text" :class="[ui.input, 'uppercase text-sm']">
+        </div>
+
+        <div>
+          <label :class="ui.label">Kategori</label>
+          <div class="relative">
+            <select v-model="form.category" :class="[ui.input, 'appearance-none']">
+                <option value="">Tanpa Kategori</option>
+                <option v-for="cat in categories" :key="cat.id" :value="cat.name">{{ cat.name }}</option>
+            </select>
+            <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+              <i class="ri-arrow-down-s-line"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label :class="[ui.label, 'text-red-400']">Harga Modal</label>
+            <input 
+              v-model="displayModal" 
+              @input="updatePrice('price_modal', $event)" 
+              type="text" 
+              inputmode="numeric" 
+              :class="[ui.input, 'bg-red-50/50 border-red-100 text-red-500 text-center font-black']"
+            >
+          </div>
+          <div>
+            <label :class="[ui.label, 'text-blue-500']">Harga Jual</label>
+            <input 
+              v-model="displaySell" 
+              @input="updatePrice('price_sell', $event)" 
+              type="text" 
+              inputmode="numeric" 
+              :class="[ui.input, 'bg-blue-50 border-blue-100 text-blue-600 text-center font-black']"
+            >
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label :class="ui.label">Stok</label>
+            <input v-model.number="form.qty" type="number" :class="[ui.input, 'text-center']">
+          </div>
+          <div>
+            <label :class="ui.label">Satuan</label>
+            <input v-model="form.unit" type="text" :class="[ui.input, 'text-center uppercase']">
+          </div>
+        </div>
+      </div>
+
+      <BaseButton 
+        variant="primary" 
+        block 
+        size="lg" 
+        label="SIMPAN PERUBAHAN" 
+        class="mt-8" 
+        @click="$emit('save', form)" 
+      />
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, onUnmounted } from 'vue';
+import { formatNumber } from "@/utils/formatters";
+import BaseButton from "@/common/BaseButton.vue";
+import type { Product } from "@/types";
+
+const props = defineProps<{ 
+  product: Product | null,
+  categories: any[]
+}>();
+
+const emit = defineEmits(['close', 'save']);
+
+const ui = {
+  modalOverlay: "fixed inset-0 z-120 flex items-end justify-center p-4 bg-slate-900/80 backdrop-blur-md",
+  modalContent: "bg-white w-full max-w-md rounded-[2.5rem] p-6 shadow-2xl animate-slide-up overflow-y-auto max-h-[90vh]",
+  closeBtn: "bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center text-slate-400 active:scale-90 transition-transform",
+  label: "text-[10px] font-black text-slate-400 uppercase ml-2 mb-1 block",
+  input: "w-full px-5 py-3 bg-slate-50 border border-slate-100 rounded-2xl font-bold text-slate-700 outline-none focus:border-blue-500 transition-all"
+};
+
+const form = ref<Product>({ ...props.product } as Product);
+const displayModal = ref(formatNumber(form.value.price_modal));
+const displaySell = ref(formatNumber(form.value.price_sell));
+
+const updatePrice = (field: 'price_modal' | 'price_sell', event: any) => {
+  let rawValue = event.target.value.replace(/\D/g, "");
+  let numValue = parseInt(rawValue) || 0;
+  form.value[field] = numValue;
+  
+  if (field === 'price_modal') displayModal.value = formatNumber(numValue);
+  if (field === 'price_sell') displaySell.value = formatNumber(numValue);
+};
+
+const handleScan = (e: any) => {
+  form.value.code = e.detail;
+};
+
+onMounted(() => window.addEventListener('barcode-scanned-edit', handleScan));
+onUnmounted(() => window.removeEventListener('barcode-scanned-edit', handleScan));
+</script>
+
+<style scoped>
+.animate-slide-up {
+  animation: slideUp 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+</style>
+
+
+
+
+
+src/components/pages/daftar-produk/ProductItem.vue:
+<template>
+  <div 
+    @click="$emit('click', product)"
+    class="bg-white p-4 rounded-4xl border border-slate-100 shadow-sm flex items-center gap-4 active:scale-95 transition-all cursor-pointer"
+  >
+    <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden">
+      <img v-if="product.image" :src="product.image" class="w-full h-full object-cover">
+      <i v-else class="ri-shopping-bag-3-fill text-blue-300 text-xl"></i>
+    </div>
+    
+    <div class="flex-1 min-w-0">
+      <div class="text-[13px] font-black text-slate-800 uppercase truncate">{{ product.name }}</div>
+      <div class="flex items-center gap-2 mt-0.5">
+          <span class="text-[9px] text-slate-400 font-bold uppercase">{{ product.code || 'Tanpa Kode' }}</span>
+          <span v-if="product.category" class="text-[8px] bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-bold uppercase">
+            {{ product.category }}
+          </span>
+      </div>
+      <div class="text-[11px] font-black text-blue-600 mt-1">{{ formatRupiah(product.price_sell) }}</div>
+    </div>
+
+    <div class="flex flex-col items-end gap-1">
+      <span class="text-[10px] font-black px-3 py-1 rounded-xl" 
+            :class="product.qty <= 5 ? 'bg-red-50 text-red-500' : 'bg-slate-50 text-slate-400'">
+        {{ product.qty }} <span class="text-[8px] opacity-60 uppercase">{{ product.unit }}</span>
+      </span>
+      <i class="ri-arrow-right-s-line text-slate-300"></i>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { formatRupiah } from "@/utils/formatters";
+import type { Product } from "@/types";
+
+defineProps<{ product: Product }>();
+defineEmits(['click']);
+</script>

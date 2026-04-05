@@ -1,0 +1,453 @@
+src/components/layout/AppHeader.vue:
+<template>
+  <header class="h-16 bg-white border-b border-slate-200 flex items-center gap-3 px-4 shrink-0 z-20 relative">
+    <button 
+      type="button"
+      @click.stop="handleToggle" 
+      class="p-2.5 bg-slate-50 hover:bg-slate-100 text-slate-800 rounded-xl transition-all border border-slate-100 active:scale-95 cursor-pointer"
+    >
+      <i :class="isSidebarOpen ? 'ri-menu-fold-line' : 'ri-menu-unfold-line'" class="text-2xl"></i>
+    </button>
+
+    <div class="flex-1">
+      <GlobalSearch 
+        v-if="showSearch"
+        v-model="cart.searchQuery" 
+        placeholder="Cari sesuatu..." 
+        :hide-suggestions="route.name === 'Stock Monitor' || route.name === 'Riwayat Transaksi'"
+      />
+      
+      <div v-else class="px-2">
+        <h2 class="text-sm font-black text-slate-700 uppercase tracking-widest italic">
+          {{ route.name }}
+        </h2>
+      </div>
+    </div>
+
+    <div class="flex items-center">
+      <button 
+        v-if="showScanner"
+        type="button"
+        @click="cart.toggleScanner(true)"
+        class="w-12 h-12 bg-blue-600 text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-blue-200 shrink-0"
+      >
+        <i class="ri-qr-scan-2-line text-xl"></i>
+      </button>
+
+      <button 
+        v-else
+        type="button"
+        @click="goToPenjualan"
+        class="w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-lg shadow-emerald-200 shrink-0 relative"
+      >
+        <i class="ri-shopping-cart-2-line text-xl"></i>
+        <span 
+          v-if="cart.items.length > 0" 
+          class="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-white animate-fade-in"
+        >
+          {{ cart.items.length }}
+        </span>
+      </button>
+    </div>
+  </header>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { useCartStore } from '@/stores/cart';
+import GlobalSearch from './GlobalSearch.vue';
+
+const props = defineProps<{ isSidebarOpen: boolean }>();
+const emit = defineEmits(['toggle-sidebar']);
+
+const cart = useCartStore();
+const route = useRoute();
+const router = useRouter();
+const showSearch = computed(() => {
+  const pages = ['Penjualan', 'Daftar Produk', 'Stock Monitor', 'Riwayat Transaksi'];
+  return pages.includes(route.name as string);
+});
+
+const showScanner = computed(() => {
+  const pages = ['Penjualan', 'Daftar Produk'];
+  return pages.includes(route.name as string);
+});
+
+const handleToggle = () => {
+  emit('toggle-sidebar');
+};
+
+const goToPenjualan = () => {
+  router.push({ name: 'Penjualan' });
+};
+</script>
+
+
+
+
+
+src/components/layout/GlobalSearch.vue:
+<template>
+  <div class="flex gap-2 w-full px-1 animate-fade-in">
+    
+    <div class="relative flex-1 group search-container">
+      <input 
+        :value="modelValue" 
+        @input="handleInput"
+        @focus="isFocused = true"
+        type="text" 
+        :placeholder="placeholder" 
+        class="w-full pl-4 pr-10 py-3 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none text-sm transition-all"
+      >
+      
+      <div class="absolute right-3 top-1/2 -translate-y-1/2 flex items-center z-30">
+        <i v-if="!modelValue" class="ri-search-2-line text-slate-400 group-focus-within:text-blue-500"></i>
+        <button v-else @click="clearSearch" class="w-6 h-6 bg-slate-100 hover:bg-slate-200 rounded-full flex items-center justify-center transition-colors">
+          <i class="ri-close-line text-slate-500"></i>
+        </button>
+      </div>
+
+      <transition name="fade">
+        <div v-if="showDropdown" 
+          class="absolute top-full right-0 -left-4 mt-2 w-[calc(100%+2rem)] bg-white rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-100 overflow-hidden z-999"
+        >
+          <div class="max-h-80 overflow-y-auto no-scrollbar py-2">
+            <div 
+              v-for="p in suggestions" :key="p.id"
+              @click="selectProduct(p)"
+              class="px-6 py-4 hover:bg-blue-50/50 border-b border-slate-50 last:border-0 flex items-center gap-4 active:bg-blue-50 transition-colors cursor-pointer"
+            >
+              <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center shrink-0 border border-slate-100">
+                <i class="ri-barcode-line text-slate-300 text-lg"></i>
+              </div>
+
+              <div class="flex-1 min-w-0">
+                <div class="text-[13px] font-black text-slate-700 uppercase truncate" v-html="highlightText(p.name, modelValue)"></div>
+                <div class="text-[9px] text-slate-400 font-bold tracking-wider uppercase">{{ p.code || 'Tanpa Kode' }}</div>
+              </div>
+
+              <div class="text-right shrink-0">
+                <div class="text-[12px] font-black text-blue-600">{{ formatRupiah(p.price_sell) }}</div>
+                <div class="text-[9px] font-bold text-slate-400 uppercase">{{ p.qty }} {{ p.unit }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, onBeforeUnmount } from 'vue';
+import { useProductSearch } from '@/composables/useProductSearch';
+import { useCartStore } from '@/stores/cart';
+
+const props = defineProps<{
+  modelValue: string;
+  placeholder?: string;
+  hideSuggestions?: boolean;
+}>();
+
+const emit = defineEmits(['update:modelValue']);
+
+const cart = useCartStore();
+
+const { 
+  suggestions, 
+  isFocused, 
+  fetchSuggestions, 
+  highlightText, 
+  formatRupiah 
+} = useProductSearch();
+
+const showDropdown = computed(() => {
+  return !props.hideSuggestions && 
+         isFocused.value && 
+         suggestions.value.length > 0 && 
+         props.modelValue.length > 0;
+});
+
+const handleInput = (e: Event) => {
+  const val = (e.target as HTMLInputElement).value;
+  emit('update:modelValue', val);
+  fetchSuggestions(val);
+};
+
+const selectProduct = (p: any) => {
+  cart.addToCart(p); 
+  clearSearch();
+  isFocused.value = false;
+};
+
+const clearSearch = () => {
+  emit('update:modelValue', '');
+  if (suggestions.value) suggestions.value = [];
+};
+
+const handleClickOutside = (e: MouseEvent) => {
+  const container = (e.target as HTMLElement).closest('.search-container');
+  if (!container) {
+    isFocused.value = false;
+  }
+};
+
+onMounted(() => window.addEventListener('mousedown', handleClickOutside));
+onBeforeUnmount(() => window.removeEventListener('mousedown', handleClickOutside));
+</script>
+
+<style scoped>
+.fade-enter-active, .fade-leave-active { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
+.fade-enter-from, .fade-leave-to { opacity: 0; transform: translateY(-10px) scale(0.98); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.animate-fade-in { animation: fadeIn 0.4s ease-out; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+
+
+
+
+src/components/layout/MainLayout.vue:
+<template>
+  <div class="fixed inset-0 bg-[#0f172a] overflow-hidden font-sans">
+    
+    <Sidebar 
+      :is-pulling="isPulling" 
+      @navigate="navigateTo" 
+      @sync="handlePullFirebase" 
+    />
+
+    <div 
+      :class="[
+        'fixed inset-0 bg-[#f1f5f9] transition-all duration-400 ease-[cubic-bezier(0.175,0.885,0.32,1.185)] z-10 shadow-[-10px_0_30px_rgba(0,0,0,0.5)] flex flex-col',
+        isSidebarOpen 
+          ? 'translate-x-[70%] scale-[0.95] rounded-[40px] cursor-pointer overflow-hidden select-none' 
+          : 'translate-x-0 scale-100 rounded-none overflow-hidden'
+      ]"
+      @click="isSidebarOpen && (isSidebarOpen = false)"
+    >
+      <AppHeader 
+        :is-sidebar-open="isSidebarOpen" 
+        @toggle-sidebar="isSidebarOpen = !isSidebarOpen" 
+      />
+
+      <main class="flex-1 overflow-y-auto bg-[#f1f5f9] relative h-full min-h-0">
+        <slot />
+        <div v-if="isSidebarOpen" class="absolute inset-0 z-50 bg-transparent"></div>
+      </main>
+    </div>
+
+    <ScannerOverlay v-if="cart.isScannerOpen" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useCartStore } from '@/stores/cart';
+import { startPullSync } from '@/api/sync';
+
+import Sidebar from './Sidebar.vue';
+import AppHeader from './AppHeader.vue';
+import ScannerOverlay from './ScannerOverlay.vue';
+
+const cart = useCartStore();
+const router = useRouter();
+const isSidebarOpen = ref(false);
+const isPulling = ref(false);
+
+const navigateTo = (routeName: string) => {
+  router.push({ name: routeName });
+  isSidebarOpen.value = false; 
+};
+
+const handlePullFirebase = async () => {
+  isPulling.value = true;
+  try {
+    startPullSync();
+    setTimeout(() => { isPulling.value = false; }, 2000);
+  } catch (err) {
+    console.error("Sync Error:", err);
+    isPulling.value = false;
+  }
+};
+</script>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+
+
+
+
+
+src/components/layout/ScannerOverlay.vue:
+<template>
+  <div class="fixed inset-0 z-100 bg-white flex flex-col p-6 animate-zoom-in">
+    <div class="flex justify-between items-center mb-6">
+      <div class="flex flex-col">
+        <span class="text-xs font-black uppercase tracking-widest text-blue-600">
+          Scanner {{ mode === 'inventory' ? 'Inventaris' : 'Kasir' }}
+        </span>
+        <span class="text-[10px] text-gray-400 font-bold uppercase">Arahkan ke Barcode Produk</span>
+      </div>
+      <button 
+        @click="closeScanner" 
+        class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center active:scale-90 transition-transform"
+      >
+        <i class="ri-close-line text-xl"></i>
+      </button>
+    </div>
+
+    <div id="reader" class="rounded-2xl overflow-hidden border-2 border-blue-50 bg-slate-900 aspect-square shadow-2xl relative">
+       <div class="absolute inset-x-8 top-1/2 h-0.5 bg-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.8)] animate-pulse z-10"></div>
+    </div>
+
+    <div class="mt-auto py-8 text-center">
+      <div class="flex items-center justify-center gap-2 mb-2">
+        <div class="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+        <span class="text-[10px] font-bold text-gray-500 tracking-widest uppercase">Kamera Ready</span>
+      </div>
+      <span class="text-[9px] text-gray-400 font-black tracking-[0.3em] uppercase italic">
+        Sinar Pagi POS System
+      </span>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useCartStore } from '@/stores/cart';
+import { useScanner } from '@/composables/useScanner';
+import { db } from '@/database';
+
+const props = defineProps({
+  mode: { type: String, default: 'cashier' }
+});
+
+const emit = defineEmits(['close', 'detected']);
+const cart = useCartStore();
+const { startScanner, stopScanner } = useScanner();
+
+const onScanSuccess = async (decodedText: string) => {
+  try {
+    const product = await db.table('products').where('code').equals(decodedText).first();
+    
+    if (navigator.vibrate) navigator.vibrate(100);
+    
+    if (props.mode === 'inventory') {
+      emit('detected', { code: decodedText, product: product || null });
+      closeScanner();
+    } else {
+      if (product) {
+        cart.addToCart(product);
+        closeScanner();
+      } else {
+        console.warn(`Barcode ${decodedText} tidak ditemukan.`);
+      }
+    }
+  } catch (error) {
+    console.error("Database error:", error);
+  }
+};
+
+const closeScanner = async () => {
+  await stopScanner();
+  if (props.mode === 'cashier') {
+    cart.toggleScanner(false);
+  } else {
+    emit('close');
+  }
+};
+
+onMounted(async () => {
+  await nextTick();
+  setTimeout(() => {
+    startScanner("reader", onScanSuccess).catch((err) => {
+      console.error("Scanner failed:", err);
+      closeScanner();
+    });
+  }, 400);
+});
+
+onBeforeUnmount(() => stopScanner());
+</script>
+
+
+
+
+
+src/components/layout/Sidebar.vue:
+<template>
+  <aside class="fixed inset-y-0 left-0 w-[70%] h-full p-6 text-white flex flex-col overflow-y-auto no-scrollbar z-0 bg-[#0f172a]">
+    <div class="mb-8 shrink-0">
+      <h1 class="text-[1.8rem] font-black text-[#fbbf24] tracking-tighter uppercase italic leading-none shadow-[#fbbf24]/40 drop-shadow-[0_0_15px]">
+        SINAR PAGI
+      </h1>
+      <p class="text-[10px] text-slate-500 font-bold tracking-[0.2em] mt-2 italic">POINT OF SALE v1.0</p>
+    </div>
+
+    <nav class="flex-1 space-y-6">
+      <div v-for="(group, gIndex) in MENU_GROUPS" :key="gIndex" class="space-y-1">
+        <div 
+          v-for="item in group.items" :key="item.name"
+          @click="$emit('navigate', item.name)" 
+          :class="getMenuClass(item.name)"
+        >
+          <i :class="item.icon" class="text-xl"></i>
+          <span class="font-medium text-[15px] whitespace-nowrap">{{ item.name }}</span>
+        </div>
+        <div v-if="gIndex < MENU_GROUPS.length - 1" class="pt-4 pb-2">
+          <div class="h-px bg-white/5 w-full"></div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="mt-auto pt-6 border-t border-white/5">
+      <button 
+        @click="$emit('sync')" 
+        :disabled="isPulling"
+        class="w-full flex items-center gap-4 px-5 py-4 rounded-4xl transition-all active:scale-95 border border-white/5"
+        :class="isPulling ? 'bg-blue-900/20 text-blue-400' : 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'"
+      >
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center bg-white/20">
+          <i class="ri-cloud-download-line text-xl" :class="{'animate-bounce': isPulling}"></i>
+        </div>
+        <div class="text-left">
+          <span class="block text-[10px] font-black uppercase tracking-widest leading-none mb-1">
+            {{ isPulling ? 'Proses...' : 'Update Data' }}
+          </span>
+          <span class="block text-[8px] font-bold opacity-60 uppercase tracking-tighter italic">Sinkron Cloud</span>
+        </div>
+      </button>
+    </div>
+  </aside>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+import { useRoute } from 'vue-router';
+import { MENU_GROUPS } from '@/constants/menu';
+
+defineProps<{ isPulling: boolean }>();
+defineEmits(['navigate', 'sync']);
+
+const route = useRoute();
+const activePage = computed(() => route.name as string);
+
+const getMenuClass = (page: string) => [
+  'flex items-center gap-4 px-5 py-3 rounded-2xl cursor-pointer transition-all duration-200 group',
+  activePage.value === page 
+    ? 'text-[#fbbf24] bg-[#fbbf24]/10 shadow-[0_0_20px_rgba(251,191,36,0.1)] font-bold' 
+    : 'text-slate-400 hover:text-white hover:bg-white/5'
+];
+</script>

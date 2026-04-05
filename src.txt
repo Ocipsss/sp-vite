@@ -1,0 +1,1270 @@
+src/api/firebase.ts:
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
+import { getAuth } from "firebase/auth";
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
+};
+
+const app = initializeApp(firebaseConfig);
+export const fdb = getDatabase(app);
+export const auth = getAuth(app);
+
+
+
+
+src/api/sync.ts:
+import { ref as fRef, set, remove, onChildAdded, onChildChanged, onChildRemoved } from "firebase/database";
+import { fdb } from "./firebase";
+import { db, DB_TABLES } from "@/database";
+import { deepCopy } from "@/utils/formatters";
+import { useSyncStore } from "@/stores/sync";
+
+const getSyncStore = () => useSyncStore();
+
+const syncToCloud = async (table: string, id: string | number, data: any) => {
+  const syncStore = getSyncStore();
+  
+  if (syncStore.isSyncing) return;
+
+  try {
+    const itemRef = fRef(fdb, `${table}/${id}`);
+    if (data === null) {
+      await remove(itemRef);
+    } else {
+      const cleanData = deepCopy(data);
+      await set(itemRef, cleanData);
+    }
+  } catch (e) {
+    console.warn(`Sync Cloud Gagal [${table}]:`, e);
+  }
+};
+
+export const setupSyncHooks = () => {
+  DB_TABLES.forEach((tableName) => {
+    const table = (db as any)[tableName];
+    if (!table) return;
+    
+    table.hook('creating', (pk: any, obj: any) => {
+      syncToCloud(tableName, pk || obj.id, obj);
+    });
+
+    table.hook('updating', (mods: any, pk: any, obj: any) => {
+      syncToCloud(tableName, pk, { ...obj, ...mods });
+    });
+
+    table.hook('deleting', (pk: any) => {
+      syncToCloud(tableName, pk, null);
+    });
+  });
+};
+
+export const startPullSync = () => {
+  const syncStore = getSyncStore();
+
+  DB_TABLES.forEach(tableName => {
+    const tableRef = fRef(fdb, tableName);
+    const table = (db as any)[tableName];
+    if (!table) return;
+
+    const prepareData = (snapshot: any) => {
+      const val = snapshot.val();
+      if (!val) return null;
+      return {
+        ...val,
+        id: val.id || snapshot.key 
+      };
+    };
+
+    onChildAdded(tableRef, async (snapshot) => {
+      const data = prepareData(snapshot);
+      if (data) {
+        try {
+          syncStore.setSyncStatus(true);
+          await table.put(data); 
+          console.log(`[SYNC] Pulling ${tableName}: ${data.name || data.id}`);
+        } catch (err) {
+          console.error(`[SYNC ERROR] Gagal simpan ${tableName}:`, err);
+        } finally {
+          syncStore.setSyncStatus(false);
+        }
+      }
+    });
+
+    onChildChanged(tableRef, async (snapshot) => {
+      const data = prepareData(snapshot);
+      if (data) {
+        try {
+          syncStore.setSyncStatus(true);
+          await table.put(data); 
+        } finally {
+          syncStore.setSyncStatus(false);
+        }
+      }
+    });
+
+    onChildRemoved(tableRef, async (snapshot) => {
+      const id = snapshot.key;
+      if (id) {
+        try {
+          syncStore.setSyncStatus(true);
+          await table.delete(id); 
+        } finally {
+          syncStore.setSyncStatus(false);
+        }
+      }
+    });
+  });
+};
+
+
+
+
+src/common/BaseButton.vue:
+<template>
+  <button
+    :type="type"
+    :disabled="disabled || loading"
+    @click="$emit('click')"
+    :class="[
+      'flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100',
+      variantClasses,
+      sizeClasses,
+      block ? 'w-full' : ''
+    ]"
+  >
+    <i v-if="loading" class="ri-loader-4-line animate-spin"></i>
+    <i v-else-if="icon" :class="icon"></i>
+    <slot />
+  </button>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue';
+
+const props = defineProps({
+  type: { type: String as () => 'button' | 'submit', default: 'button' },
+  variant: { type: String as () => 'primary' | 'secondary' | 'danger' | 'ghost', default: 'primary' },
+  size: { type: String as () => 'sm' | 'md' | 'lg', default: 'md' },
+  icon: String,
+  disabled: Boolean,
+  loading: Boolean,
+  block: Boolean
+});
+
+defineEmits(['click']);
+
+const variantClasses = computed(() => {
+  switch (props.variant) {
+    case 'primary': return 'bg-blue-600 text-white shadow-lg shadow-blue-200';
+    case 'secondary': return 'bg-slate-900 text-white';
+    case 'danger': return 'bg-red-50 text-red-600 border border-red-100';
+    case 'ghost': return 'bg-transparent text-slate-500 hover:bg-slate-100';
+    default: return '';
+  }
+});
+
+const sizeClasses = computed(() => {
+  switch (props.size) {
+    case 'sm': return 'px-3 py-1.5 rounded-xl text-[10px] font-bold';
+    case 'lg': return 'px-6 py-4 rounded-[1.5rem] text-[14px] font-black tracking-widest';
+    default: return 'px-4 py-3 rounded-2xl text-[12px] font-black';
+  }
+});
+</script>
+
+
+
+
+src/composables/useAutoScroll.ts:
+import { ref, nextTick, watch, type Ref } from 'vue';
+
+export function useAutoScroll(dataToWatch: Ref<any> | (() => any)) {
+  const scrollContainer = ref<HTMLElement | null>(null);
+
+  const scrollToBottom = () => {
+    nextTick(() => {
+      if (scrollContainer.value) {
+        scrollContainer.value.scrollTo({
+          top: scrollContainer.value.scrollHeight,
+          behavior: 'smooth',
+        });
+      }
+    });
+  };
+
+  watch(dataToWatch, () => {
+    scrollToBottom();
+  }, { deep: true });
+
+  return {
+    scrollContainer,
+    scrollToBottom
+  };
+}
+
+
+
+
+src/composables/useProductSearch.ts:
+import { ref } from 'vue';
+import { db } from '@/database';
+import { highlightText, formatRupiah } from '@/utils/formatters';
+
+export function useProductSearch() {
+  const suggestions = ref<any[]>([]);
+  const isFocused = ref(false);
+
+  const fetchSuggestions = async (query: string) => {
+    if (!query || query.length < 1) {
+      suggestions.value = [];
+      return;
+    }
+
+    const search = query.toLowerCase().trim();
+    
+    const allMatches = await db.table('products')
+      .filter(p => p.name.toLowerCase().includes(search))
+      .toArray();
+
+    suggestions.value = allMatches.sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aStarts = aName.startsWith(search);
+      const bStarts = bName.startsWith(search);
+
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
+      return aName.localeCompare(bName);
+    }).slice(0, 8);
+  };
+
+  return {
+    suggestions,
+    isFocused,
+    fetchSuggestions,
+    highlightText,
+    formatRupiah
+  };
+}
+
+
+
+
+src/composables/useScanner.ts:
+import { ref } from 'vue';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
+import { SCANNER_CONFIG } from '@/constants/app';
+
+export function useScanner() {
+  let html5QrCode: Html5Qrcode | null = null;
+  const isScanning = ref(false);
+
+  const stopScanner = async () => {
+    if (html5QrCode && html5QrCode.isScanning) {
+      try {
+        await html5QrCode.stop();
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        html5QrCode.clear();
+        html5QrCode = null;
+        isScanning.value = false;
+      } catch (err) {
+        console.error("Gagal menghentikan scanner:", err);
+      }
+    }
+  };
+
+  const startScanner = async (
+    elementId: string, 
+    onScanSuccessCallback: (text: string) => void,
+    onScanError?: (err: any) => void
+  ) => {
+    try {
+      if (html5QrCode) await stopScanner();
+
+      html5QrCode = new Html5Qrcode(elementId);
+      isScanning.value = true;
+
+      const config = { 
+        ...SCANNER_CONFIG,
+        formatsToSupport: [ 
+          Html5QrcodeSupportedFormats.EAN_13, 
+          Html5QrcodeSupportedFormats.EAN_8, 
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128 
+        ]
+      };
+
+      await html5QrCode.start(
+        { facingMode: "environment" }, 
+        config, 
+        (decodedText) => {
+          onScanSuccessCallback(decodedText);
+        }, 
+        () => {}
+      );
+    } catch (err) {
+      console.error("Gagal memulai scanner:", err);
+      isScanning.value = false;
+      if (onScanError) onScanError(err);
+      throw err;
+    }
+  };
+
+  return {
+    startScanner,
+    stopScanner,
+    isScanning
+  };
+}
+
+
+
+
+src/constants/app.ts:
+export const APP_NAME = 'Sinar Pagi POS';
+
+export const CATEGORIES_WITH_SERVICE = ['Rokok', 'Mie', 'Minuman', 'Snack'];
+
+export const PAYMENT_METHODS = [
+  { id: 'Tunai', label: 'TUNAI', icon: 'ri-money-dollar-circle-line' },
+  { id: 'QRIS', label: 'QRIS', icon: 'ri-qr-code-line' },
+  { id: 'Tempo', label: 'TEMPO', icon: 'ri-calendar-todo-line' }
+] as const;
+
+export const TRANSACTION_STATUS = {
+  SUCCESS: 'success',
+  PENDING: 'pending',
+  CANCELED: 'canceled'
+} as const;
+
+export const SCANNER_CONFIG = { 
+  fps: 10, 
+  qrbox: { width: 250, height: 250 },
+  aspectRatio: 1.0 
+};
+
+
+
+
+src/constants/menu.ts:
+export const MENU_GROUPS = [
+  { 
+    items: [
+      { name: 'Dashboard', icon: 'ri-dashboard-3-line' },
+      { name: 'Penjualan', icon: 'ri-calculator-line' },
+      { name: 'Layanan Digital', icon: 'ri-smartphone-line' }
+    ]
+  },
+  { 
+    items: [
+      { name: 'Riwayat Transaksi', icon: 'ri-history-line' },
+      { name: 'Stock Monitor', icon: 'ri-radar-line' },
+      { name: 'Piutang Penjualan', icon: 'ri-hand-coin-line' },
+      { name: 'Pengeluaran', icon: 'ri-shopping-basket-line' } 
+    ]
+  },
+  { 
+    items: [
+      { name: 'Daftar Produk', icon: 'ri-list-settings-line' },
+      { name: 'Tambah Produk', icon: 'ri-add-box-line' },
+      { name: 'Kategori Produk', icon: 'ri-price-tag-3-line' },
+      { name: 'Harga Paket', icon: 'ri-box-3-line' },
+      { name: 'Data Jasa', icon: 'ri-customer-service-2-line' },
+      { name: 'Data Member', icon: 'ri-user-heart-line' },
+      { name: 'Data Kasir', icon: 'ri-user-star-line' }
+    ]
+  },
+  { 
+    items: [
+      { name: 'Laporan Harian', icon: 'ri-calendar-event-line' },
+      { name: 'Laba Rugi', icon: 'ri-funds-line' },
+      { name: 'Arus Uang', icon: 'ri-exchange-funds-line' },
+      { name: 'Pengaturan', icon: 'ri-settings-5-line' }
+    ]
+  }
+];
+
+
+
+
+src/database/index.ts:
+import Dexie, { type Table } from 'dexie';
+import type { 
+  Product, 
+  ProductPackage, 
+  Transaction, 
+  Expense, 
+  Member, 
+  ServiceItem,
+  DigitalTransaction,
+  AppSettings,
+  DebtRecord,
+  StockLog,
+  ID 
+} from '@/types';
+
+export const DEXIE_SCHEMA = {
+  // Ditambahkan index 'category' dan 'code' untuk pencarian produk yang lebih cepat
+  products: 'id, name, code, category, qty, updatedAt',
+  product_packages: 'id, name, productId',
+  categories: 'id, name',
+  // Index pada 'memberId', 'status', dan 'paymentMethod' untuk laporan filter transaksi
+  transactions: 'id, timestamp, date, memberId, status, paymentMethod', 
+  members: 'id, name, phone',
+  expenses: 'id, timestamp, date, category', 
+  services: 'id, name, price',
+  digital_transactions: 'id, timestamp',
+  settings: 'id',
+  // PENTING: Index 'amount_remaining' dan 'dueDate' ditambahkan untuk fitur manajemen hutang/piutang
+  debts: 'id, transactionId, memberId, status, dueDate, amount_remaining',
+  stock_logs: 'id, productId, type, timestamp'
+};
+
+export const DB_TABLES = Object.keys(DEXIE_SCHEMA);
+
+export class SinarPagiDB extends Dexie {
+  products!: Table<Product>;
+  product_packages!: Table<ProductPackage>;
+  categories!: Table<{ id: ID; name: string }>;
+  transactions!: Table<Transaction>;
+  members!: Table<Member>;
+  expenses!: Table<Expense>;
+  services!: Table<ServiceItem>;
+  digital_transactions!: Table<DigitalTransaction>;
+  settings!: Table<AppSettings>;
+  debts!: Table<DebtRecord>;
+  stock_logs!: Table<StockLog>;
+
+  constructor() {
+    super('SinarPagiDB');
+    /**
+     * Versi 27: 
+     * 1. Mendukung penamaan kolom seragam (amount_total, dsb)
+     * 2. Mendukung status transaksi baru (partial)
+     * 3. Penambahan index untuk performa query hutang/piutang
+     */
+    this.version(27).stores(DEXIE_SCHEMA);
+  }
+}
+
+export const db = new SinarPagiDB();
+
+export const generateUID = (): ID => {
+  // Menggunakan crypto.randomUUID jika tersedia (modern browser/Android WebView baru)
+  // Fallback ke math random jika di lingkungan lama
+  const randomPart = typeof crypto !== 'undefined' && crypto.randomUUID 
+    ? crypto.randomUUID().split('-')[0] 
+    : Math.random().toString(36).substring(2, 7);
+    
+  return `SP-${Date.now().toString(36)}-${randomPart}`;
+};
+
+
+
+
+src/main.ts:
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import './style.css' 
+import 'remixicon/fonts/remixicon.css'
+import App from './App.vue'
+import router from './router'
+import { auth } from './api/firebase'
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { setupSyncHooks, startPullSync } from './api/sync'
+import { db } from './database'
+
+const app = createApp(App)
+const pinia = createPinia()
+app.use(pinia)
+app.use(router)
+
+const initApp = () => {
+  db.open().then(() => {
+    console.log("✅ Database SinarPagiDB Aktif");
+    app.mount('#app');
+  });
+};
+
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("🔐 User terautentikasi:", user.email);
+    setupSyncHooks();
+    startPullSync();
+    initApp();
+  } else {
+    console.log("🔓 Belum login, mencoba login otomatis...");
+    signInWithEmailAndPassword(auth, "hudzshop@gmail.com", "07NovembeR21")
+      .catch(err => {
+        console.error("❌ Login Gagal:", err.message);
+        initApp();
+      });
+  }
+});
+
+
+
+
+src/router/index.ts:
+import { createRouter, createWebHistory } from 'vue-router'
+import PageView from '@/views/PageView.vue'
+
+const routes = [
+  // GRUP 1
+  { path: '/', name: 'Dashboard', component: PageView, meta: { icon: 'ri-dashboard-3-line' } },
+  { path: '/penjualan', name: 'Penjualan', component: PageView, meta: { icon: 'ri-calculator-line', showScanner: true } },
+  { path: '/layanan-digital', name: 'Layanan Digital', component: PageView, meta: { icon: 'ri-smartphone-line' } },
+
+  // GRUP 2
+  { path: '/riwayat-transaksi', name: 'Riwayat Transaksi', component: PageView, meta: { icon: 'ri-history-line' } },
+  { path: '/stock-monitor', name: 'Stock Monitor', component: PageView, meta: { icon: 'ri-radar-line' } },
+  { path: '/piutang-penjualan', name: 'Piutang Penjualan', component: PageView, meta: { icon: 'ri-hand-coin-line' } },
+  { path: '/pengeluaran', name: 'Pengeluaran', component: PageView, meta: { icon: 'ri-shopping-basket-line' } },
+
+  // GRUP 3
+  { path: '/daftar-produk', name: 'Daftar Produk', component: PageView, meta: { icon: 'ri-list-settings-line', showScanner: true } },
+  { path: '/tambah-produk', name: 'Tambah Produk', component: PageView, meta: { icon: 'ri-add-box-line' } },
+  { path: '/kategori-produk', name: 'Kategori Produk', component: PageView, meta: { icon: 'ri-price-tag-3-line' } },
+  { path: '/harga-paket', name: 'Harga Paket', component: PageView, meta: { icon: 'ri-box-3-line' } },
+  { path: '/data-jasa', name: 'Data Jasa', component: PageView, meta: { icon: 'ri-customer-service-2-line' } },
+  { path: '/data-member', name: 'Data Member', component: PageView, meta: { icon: 'ri-user-heart-line' } },
+  { path: '/data-kasir', name: 'Data Kasir', component: PageView, meta: { icon: 'ri-user-star-line' } },
+
+  // GRUP 4
+  { path: '/laporan-harian', name: 'Laporan Harian', component: PageView, meta: { icon: 'ri-calendar-event-line' } },
+  { path: '/laba-rugi', name: 'Laba Rugi', component: PageView, meta: { icon: 'ri-funds-line' } },
+  { path: '/arus-uang', name: 'Arus Uang', component: PageView, meta: { icon: 'ri-exchange-funds-line' } },
+  { path: '/pengaturan', name: 'Pengaturan', component: PageView, meta: { icon: 'ri-settings-5-line' } },
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+export default router
+
+
+
+
+src/stores/cart.ts:
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { db, generateUID } from '@/database';
+import type { CartItem, Product, Transaction, PaymentMethod, StockMutationType, DebtRecord, TransactionStatus } from '@/types';
+import { calculateCartTotal, calculateChange } from '@/utils/calculators';
+import { deepCopy } from '@/utils/formatters';
+import { TRANSACTION_STATUS } from '@/constants/app';
+
+export const useCartStore = defineStore('cart', () => {
+  // --- State ---
+  const items = ref<CartItem[]>([]);
+  const paymentMethod = ref<PaymentMethod>('Tunai');
+  const cashAmount = ref<number>(0);
+  const isScannerOpen = ref(false);
+  const selectedMemberId = ref<string | null>(null);
+  const searchQuery = ref<string>("");
+
+  // --- Computed ---
+  const totalBelanja = computed(() => calculateCartTotal(items.value));
+  const kembalian = computed(() => calculateChange(cashAmount.value, totalBelanja.value));
+
+  // --- UI Actions ---
+  const clearSearch = () => {
+    searchQuery.value = "";
+  };
+
+  const toggleScanner = (status: boolean) => {
+    isScannerOpen.value = status;
+  };
+
+  const resetCart = () => {
+    items.value = [];
+    cashAmount.value = 0;
+    selectedMemberId.value = null;
+    paymentMethod.value = 'Tunai';
+    searchQuery.value = "";
+  };
+
+  // --- Cart Management ---
+  const updateQty = (cartId: string, change: number) => {
+    const index = items.value.findIndex(i => i.cartId === cartId);
+    const item = items.value[index];
+
+    if (item) {
+      item.qty += change;
+      // Sinkronisasi extraChargeQty jika ada biaya tambahan
+      if (item.extraChargeName && item.extraChargeQty !== undefined) {
+         item.extraChargeQty = Math.max(0, item.extraChargeQty + change);
+      }
+      
+      if (item.qty <= 0) {
+        items.value.splice(index, 1);
+      }
+    }
+  };
+
+  const setExtraCharge = (cartId: string, service: { name: string; price: number }) => {
+    const item = items.value.find(i => i.cartId === cartId);
+    if (item) {
+      item.extraChargeName = service.name;
+      item.extraCharge = service.price;
+      if (!item.extraChargeQty || item.extraChargeQty === 0) {
+        item.extraChargeQty = item.qty;
+      }
+    }
+  };
+
+  const updateExtraQty = (cartId: string, change: number) => {
+    const item = items.value.find(i => i.cartId === cartId);
+    if (item) {
+      const currentQty = item.extraChargeQty || 0;
+      item.extraChargeQty = Math.max(0, currentQty + change);
+    }
+  };
+
+  const removeExtraCharge = (cartId: string) => {
+    const item = items.value.find(i => i.cartId === cartId);
+    if (item) {
+      item.extraChargeName = '';
+      item.extraCharge = 0;
+      item.extraChargeQty = 0;
+    }
+  };
+
+  const addToCart = (product: Product, isPackage = false) => {
+    const cartId = isPackage ? `${product.id}-pkg` : `${product.id}-reg`;
+    const existing = items.value.find(i => i.cartId === cartId);
+
+    if (existing) {
+      existing.qty++;
+      if (existing.extraChargeName) {
+        existing.extraChargeQty = (existing.extraChargeQty || 0) + 1;
+      }
+    } else {
+      items.value.push({
+        ...deepCopy(product),
+        cartId,
+        qty: 1,
+        extraCharge: 0,
+        extraChargeQty: 0,
+        extraChargeName: '',
+        price_sell: isPackage ? (product.pack_price || product.price_sell) : product.price_sell,
+        qty_reduce: isPackage ? (product.pack_size || 1) : 1
+      } as CartItem);
+    }
+  };
+
+  /**
+   * PROSES CHECKOUT
+   * Mengakomodasi: Sukses, Tempo (Pending), dan Cicilan (Partial)
+   */
+  const processCheckout = async () => {
+    const isTempo = paymentMethod.value === 'Tempo';
+    // Cek apakah pembayaran kurang (Parsial/Cicilan)
+    const isPartial = !isTempo && cashAmount.value > 0 && cashAmount.value < totalBelanja.value;
+
+    if ((isTempo || isPartial) && !selectedMemberId.value) {
+      throw new Error("Pelanggan (Member) wajib dipilih untuk metode pembayaran Tempo atau Cicilan.");
+    }
+
+    const transactionId = generateUID();
+    const now = new Date();
+    
+    // Tentukan status berdasarkan kondisi pembayaran
+    let finalStatus: TransactionStatus = 'success';
+    if (isTempo) finalStatus = 'pending';
+    if (isPartial) finalStatus = 'partial';
+
+    const transactionData: Transaction = {
+      id: transactionId,
+      date: now.toISOString(),
+      timestamp: now.getTime(),
+      amount_total: totalBelanja.value,
+      amount_paid: isTempo ? 0 : cashAmount.value,
+      amount_change: isTempo || isPartial ? 0 : kembalian.value,
+      paymentMethod: paymentMethod.value,
+      memberId: selectedMemberId.value,
+      status: finalStatus,
+      items: deepCopy(items.value)
+    };
+
+    try {
+      await db.transaction('rw', [db.transactions, db.products, db.stock_logs, db.debts], async () => {
+        // 1. Catat Transaksi
+        await db.transactions.add(transactionData);
+
+        // 2. Catat Piutang jika belum lunas (Tempo atau Parsial)
+        if (isTempo || isPartial) {
+          const remainingDebt = totalBelanja.value - (isTempo ? 0 : cashAmount.value);
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 30); // Default 30 hari
+
+          const debtData: DebtRecord = {
+            id: generateUID(),
+            transactionId: transactionId,
+            memberId: selectedMemberId.value!,
+            amount_total: totalBelanja.value,
+            amount_remaining: remainingDebt,
+            dueDate: dueDate.toISOString(),
+            status: isPartial ? 'partial' : 'unpaid',
+            createdAt: now.toISOString()
+          };
+          await db.debts.add(debtData);
+        }
+
+        // 3. Update Stok & Log (Audit Trail)
+        for (const item of items.value) {
+          const p = await db.products.get(item.id);
+          
+          if (p) {
+            const multiplier = item.qty_reduce || 1;
+            const totalReduce = item.qty * multiplier;
+            const finalQty = p.qty - totalReduce;
+
+            await db.products.update(item.id, {
+              qty: finalQty,
+              updatedAt: now.toISOString()
+            });
+
+            await db.stock_logs.add({
+              id: generateUID(),
+              productId: item.id,
+              type: 'OUT',
+              prevQty: p.qty,
+              changeQty: totalReduce,
+              finalQty: finalQty,
+              price_modal: item.price_modal,
+              price_sell: item.price_sell,
+              referenceId: transactionId,
+              note: `Jual ${item.qty} ${multiplier > 1 ? 'Paket' : item.unit} (@${multiplier} ${item.unit}). Status: ${finalStatus}`,
+              timestamp: now.getTime()
+            });
+          }
+        }
+      });
+
+      resetCart();
+      return transactionId;
+    } catch (error) {
+      console.error("Checkout Gagal:", error);
+      throw error;
+    }
+  };
+
+  /**
+   * ADJUSTMENT STOK
+   */
+  const adjustStock = async (
+    product: Product, 
+    newQty: number, 
+    type: StockMutationType = 'ADJUSTMENT', 
+    note: string = 'Koreksi Stok Manual'
+  ) => {
+    const now = new Date();
+    const changeQty = Math.abs(newQty - product.qty);
+
+    try {
+      await db.transaction('rw', [db.products, db.stock_logs], async () => {
+        await db.products.update(product.id, {
+          qty: newQty,
+          updatedAt: now.toISOString()
+        });
+
+        await db.stock_logs.add({
+          id: generateUID(),
+          productId: product.id,
+          type: type,
+          prevQty: product.qty,
+          changeQty: changeQty,
+          finalQty: newQty,
+          price_modal: product.price_modal,
+          price_sell: product.price_sell,
+          note: note,
+          timestamp: now.getTime()
+        });
+      });
+    } catch (error) {
+      console.error("Gagal melakukan koreksi stok:", error);
+      throw error;
+    }
+  };
+
+  return { 
+    items, paymentMethod, cashAmount, isScannerOpen, selectedMemberId, searchQuery,
+    totalBelanja, kembalian, 
+    addToCart, updateQty, processCheckout, adjustStock, resetCart, toggleScanner, clearSearch,
+    setExtraCharge, updateExtraQty, removeExtraCharge
+  };
+});
+
+
+
+
+src/stores/sync.ts:
+import { defineStore } from 'pinia';
+import { ref } from 'vue';
+
+export const useSyncStore = defineStore('sync', () => {
+  const isSyncing = ref(false);
+  const lastSyncTime = ref<Date | null>(null);
+
+  const setSyncStatus = (status: boolean) => {
+    isSyncing.value = status;
+    if (!status) {
+      lastSyncTime.value = new Date();
+    }
+  };
+
+  return { isSyncing, lastSyncTime, setSyncStatus };
+});
+
+
+
+
+src/style.css:
+@import "tailwindcss";
+
+:root {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: #f3f4f6;
+}
+
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+body {
+  overflow: hidden;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d1d5db;
+}
+
+
+
+
+src/types/index.ts:
+export type ID = string;
+export type ISODataString = string;
+export type UnixTimestamp = number;
+export type PaymentMethod = 'Tunai' | 'QRIS' | 'Tempo';
+// Tambahan 'partial' untuk mendukung cicilan di level transaksi
+export type TransactionStatus = 'success' | 'pending' | 'canceled' | 'partial';
+// Tambahan 'overdue' untuk peringatan jatuh tempo
+export type DebtStatus = 'unpaid' | 'partial' | 'paid' | 'overdue';
+
+export interface WholesaleConfig {
+  min_qty: number;
+  wholesale_price: number;
+}
+
+export type StockMutationType = 'IN' | 'OUT' | 'ADJUSTMENT' | 'RETURN';
+
+export interface StockLog {
+  id: string;
+  productId: string;
+  type: StockMutationType;
+  prevQty: number;
+  changeQty: number;
+  finalQty: number;
+  price_modal: number;
+  price_sell: number;
+  referenceId?: string;
+  note?: string;
+  timestamp: number;
+}
+
+export interface Product {
+  id: ID;
+  code: string;
+  name: string;
+  category: string;
+  unit: string;
+  price_modal: number;
+  price_sell: number;
+  qty: number;
+  image: string | null;
+  qty_reduce?: number;
+  pack_price?: number;
+  pack_size?: number;
+  wholesale_configs?: WholesaleConfig[];
+  updatedAt: ISODataString;
+}
+
+export interface Member {
+  id: ID;
+  name: string;
+  phone?: string;
+  points?: number;
+  address?: string;
+  debt_limit?: number;
+}
+
+export interface DebtRecord {
+  id: ID;
+  transactionId: ID;
+  memberId: ID;
+  amount_total: number;
+  amount_remaining: number;
+  dueDate: ISODataString;
+  status: DebtStatus;
+  createdAt: ISODataString;
+}
+
+export interface CartItem {
+  cartId: ID;
+  id: ID;
+  name: string;
+  code: string;
+  qty: number;
+  unit: string;
+  price_modal: number;
+  price_sell: number;
+  qty_reduce: number;
+  extraCharge: number;
+  extraChargeQty: number;
+  extraChargeName?: string;
+  discount_nominal?: number;
+  note?: string;
+}
+
+export interface Transaction {
+  id: ID;
+  timestamp: UnixTimestamp;
+  date: ISODataString;
+  items: CartItem[];
+  amount_total: number;
+  amount_paid: number;
+  amount_change: number;
+  paymentMethod: PaymentMethod;
+  memberId?: ID | null;
+  status: TransactionStatus;
+  note?: string;
+}
+
+export interface Expense {
+  id: ID;
+  timestamp: UnixTimestamp;
+  date: ISODataString;
+  category: string;
+  amount: number;
+  note: string;
+}
+
+export interface DigitalTransaction {
+  id: ID;
+  timestamp: UnixTimestamp;
+  type: string;
+  amount: number;
+  provider: string;
+  status: TransactionStatus;
+}
+
+export interface AppSettings {
+  id: 'main_settings';
+  storeName: string;
+  address: string;
+  footerMessage: string;
+  isPrinterActive: boolean;
+}
+
+export interface ProductPackage {
+  id: ID;
+  productId: ID;
+  name: string;
+  qty_pcs: number;
+  price_sell: number;
+}
+
+export interface ServiceItem {
+  id: ID;
+  name: string;
+  price: number;
+}
+
+
+
+
+src/utils/calculators.ts:
+import type { CartItem, WholesaleConfig } from '@/types';
+
+export const calculateCartTotal = (items: CartItem[]): number => {
+  return items.reduce((acc, item) => {
+    const subtotalProduk = (Number(item.price_sell) || 0) * (Number(item.qty) || 0);
+    const subtotalExtra = (Number(item.extraCharge) || 0) * (Number(item.extraChargeQty) || 0);
+    return acc + subtotalProduk + subtotalExtra;
+  }, 0);
+};
+
+export const calculateChange = (cash: number, total: number): number => {
+  return Math.max(0, cash - total);
+};
+
+export const calculateMemberPoints = (totalBelanja: number, multiplier: number = 10000): number => {
+  return Math.floor(totalBelanja / multiplier);
+};
+
+export const calculateStockReduction = (qtyBought: number, qtyReduce: number = 1): number => {
+  return Number(qtyBought) * Number(qtyReduce);
+};
+
+export const calculateUnitPrice = (packageModal: number, quantityInPackage: number): number => {
+  if (!quantityInPackage || quantityInPackage <= 0) return packageModal;
+  return Math.ceil(packageModal / quantityInPackage);
+};
+
+export const determinePrice = (qty: number, normalPrice: number, wholesaleConfigs: WholesaleConfig[] = []): number => {
+  if (!Array.isArray(wholesaleConfigs) || wholesaleConfigs.length === 0) return normalPrice;
+  
+  const sortedConfigs = [...wholesaleConfigs].sort((a, b) => b.min_qty - a.min_qty);
+  
+  const applicableConfig = sortedConfigs.find(config => qty >= config.min_qty);
+  return applicableConfig ? applicableConfig.wholesale_price : normalPrice;
+};
+
+export const calculateGrossProfit = (items: CartItem[]): number => {
+  return items.reduce((total, item) => {
+    const modal = Number(item.price_modal || 0);
+    const jual = Number(item.price_sell || 0);
+    const qty = Number(item.qty || 0);
+    return total + ((jual - modal) * qty);
+  }, 0);
+};
+
+export const calculateNetProfit = (grossProfit: number, totalExpenses: number): number => {
+  return grossProfit - totalExpenses;
+};
+
+export const calculateNetBalance = (inflow: number, outflow: number): number => {
+  return inflow - outflow;
+};
+
+export const calculateAssetValue = (products: any[]): number => {
+  return products.reduce((sum, p) => {
+    return sum + (Number(p.price_modal || 0) * Number(p.qty || 0));
+  }, 0);
+};
+
+export const calculateDigitalPhysicalCash = (type: 'topup' | 'tariktunai', nominal: number, adminFee: number): number => {
+  if (type === 'topup') return nominal + adminFee;
+  return adminFee - nominal;
+};
+
+export const calculateRemainingDebt = (totalTagihan: number, totalDibayar: number): number => {
+  const sisa = totalTagihan - totalDibayar;
+  return sisa > 0 ? sisa : 0;
+};
+
+export const calculateMarginPercentage = (priceSell: number, priceModal: number): string => {
+  if (!priceModal || priceModal === 0) return "0%";
+  const profit = priceSell - priceModal;
+  const percentage = (profit / priceModal) * 100;
+  return percentage.toFixed(2) + "%";
+};
+
+
+
+
+src/utils/formatters.ts:
+import { TRANSACTION_STATUS } from '../constants/app';
+
+export const highlightText = (text: string, query: string): string => {
+  const search = query.trim();
+  if (!search) return text;
+  const safeQuery = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`(${safeQuery})`, 'gi');
+  return text.replace(regex, '<span class="text-blue-600 font-black">$1</span>');
+};
+
+export const capitalize = (text: string): string => {
+  if (!text) return "";
+  return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+export const truncateText = (text: string, limit: number = 20): string => {
+  if (!text) return "";
+  return text.length > limit ? text.substring(0, limit) + "..." : text;
+};
+
+export const formatRupiah = (val: number | string): string => {
+  return new Intl.NumberFormat('id-ID', { 
+    style: 'currency', 
+    currency: 'IDR', 
+    maximumFractionDigits: 0 
+  }).format(Number(val) || 0);
+};
+
+export const formatNumber = (val: number | string): string => {
+  return new Intl.NumberFormat('id-ID', {
+    maximumFractionDigits: 0
+  }).format(Number(val) || 0);
+};
+
+export const parseRawNumber = (val: any): number => {
+  if (typeof val === 'number') return val;
+  if (typeof val !== 'string') return 0;
+  return parseInt(val.replace(/\D/g, ""), 10) || 0;
+};
+
+
+export const formatTransactionStatus = (status: string): string => {
+  if (!status) return "-";
+  
+  const statusMap: Record<string, string> = {
+    [TRANSACTION_STATUS.SUCCESS]: 'LUNAS',
+    [TRANSACTION_STATUS.PENDING]: 'TEMPO',
+    [TRANSACTION_STATUS.CANCELED]: 'BATAL',
+    
+    'partial': 'CICILAN',
+    'overdue': 'JATUH TEMPO',
+    'unpaid': 'BELUM LUNAS',
+    'paid': 'LUNAS',
+    'tempo': 'TEMPO',
+    'hutang': 'PIUTANG'
+  };
+  
+  return statusMap[status.toLowerCase()] || status.toUpperCase();
+};
+
+export const formatMemberId = (id: string): string => {
+  if (!id) return "-";
+  const cleanId = id.toUpperCase().startsWith('SP-') ? id : `SP-${id}`;
+  return cleanId.toUpperCase();
+};
+
+export const formatPhone = (phone: string): string => {
+  if (!phone) return "-";
+  const cleaned = phone.replace(/\D/g, '');
+  const match = cleaned.match(/^(\d{4})(\d{4})(\d{1,})$/);
+  if (match) return `${match[1]}-${match[2]}-${match[3]}`;
+  return phone;
+};
+
+export const formatPoints = (val: number | string): string => {
+  return (Number(val) || 0).toLocaleString('id-ID') + " Pts";
+};
+
+export const formatDateTime = (date: string | Date): string => {
+  if (!date) return "-";
+  try {
+    return new Date(date).toLocaleString('id-ID', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    });
+  } catch (e) {
+    return "-";
+  }
+};
+
+export const cleanBarcode = (code: string): string => {
+  return code ? code.trim().replace(/[^a-zA-Z0-9]/g, "") : "";
+};
+
+export const deepCopy = <T>(data: T): T => {
+  if (!data) return data;
+  return JSON.parse(JSON.stringify(data));
+};
+
+
+
+
+src/views/PageView.vue:
+<template>
+  <div class="min-h-full w-full">
+    <component :is="activeComponent" v-if="activeComponent" />
+
+    <div v-else class="p-8 animate-slide-up h-full flex flex-col">
+      <div class="flex items-center gap-4 mb-8">
+        <div class="w-14 h-14 bg-white rounded-2xl shadow-sm border border-slate-100 flex items-center justify-center text-blue-600">
+          <i :class="currentIcon" class="text-3xl"></i>
+        </div>
+        <div>
+          <h1 class="text-2xl font-black text-slate-800 uppercase tracking-tighter leading-none">
+            {{ title }}
+          </h1>
+          <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">Sinar Pagi POS • Modul Sistem</p>
+        </div>
+      </div>
+
+      <div class="bg-white/50 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex-1 flex flex-col items-center justify-center text-center p-10 min-h-[60vh]">
+        <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-4 shadow-sm">
+          <i class="ri-hammer-line text-4xl text-slate-200"></i>
+        </div>
+        <h2 class="text-xl font-black text-slate-400 uppercase tracking-tighter">Tahap Migrasi</h2>
+        <p class="text-slate-400 max-w-xs mt-2 text-sm leading-relaxed">
+          Modul <span class="text-blue-600 font-bold">"{{ title }}"</span> sedang dalam proses pemindahan ke arsitektur Cloud Sync.
+        </p>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed, markRaw } from 'vue';
+import { useRoute } from 'vue-router';
+
+// IMPORT HALAMAN YANG SUDAH MIGRASI
+import DaftarProduk from '../components/pages/daftar-produk/DaftarProduk.vue';
+import Dashboard from '../components/pages/dashboard/Dashboard.vue';
+import KategoriProduk from '../components/pages/kategori/KategoriProduk.vue';
+import Penjualan from '../components/pages/penjualan/Penjualan.vue';
+import RiwayatTransaksi from '../components/pages/riwayat-transaksi/RiwayatTransaksi.vue';
+import StockMonitor from '../components/pages/stock-monitor/StockMonitor.vue';
+import TambahProduk from '../components/pages/tambah-produk/TambahProduk.vue';
+import LayananDigital from '../components/pages/layanan-digital/LayananDigital.vue';
+
+const route = useRoute();
+
+// Mapping Nama Route ke Komponen
+const componentsMap: Record<string, any> = {
+  'Daftar Produk': markRaw(DaftarProduk),
+  'Dashboard': markRaw(Dashboard),
+  'Kategori Produk': markRaw(KategoriProduk),
+  'Penjualan': markRaw(Penjualan),
+  'Riwayat Transaksi': markRaw(RiwayatTransaksi),
+  'Stock Monitor': markRaw(StockMonitor),
+  'Tambah Produk': markRaw(TambahProduk),
+  'Layanan Digital': markRaw(LayananDigital),// Sinkronkan dengan router
+};
+
+const title = computed(() => (route.name as string) || 'Halaman');
+const currentIcon = computed(() => (route.meta?.icon as string) || 'ri-bookmark-3-line');
+const activeComponent = computed(() => componentsMap[route.name as string]);
+</script>
+
+<style scoped>
+@keyframes slideUp {
+  from { transform: translateY(15px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+.animate-slide-up {
+  animation: slideUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+</style>
+
