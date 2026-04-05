@@ -7,15 +7,19 @@ import { deepCopy } from '@/utils/formatters';
 import { TRANSACTION_STATUS } from '@/constants/app';
 
 export const useCartStore = defineStore('cart', () => {
+  // --- State ---
   const items = ref<CartItem[]>([]);
   const paymentMethod = ref<PaymentMethod>('Tunai');
   const cashAmount = ref<number>(0);
   const isScannerOpen = ref(false);
   const selectedMemberId = ref<string | null>(null);
   const searchQuery = ref<string>("");
+
+  // --- Computed ---
   const totalBelanja = computed(() => calculateCartTotal(items.value));
   const kembalian = computed(() => calculateChange(cashAmount.value, totalBelanja.value));
 
+  // --- UI Actions ---
   const clearSearch = () => {
     searchQuery.value = "";
   };
@@ -32,6 +36,7 @@ export const useCartStore = defineStore('cart', () => {
     searchQuery.value = "";
   };
 
+  // --- Cart Management ---
   const updateQty = (cartId: string, change: number) => {
     const index = items.value.findIndex(i => i.cartId === cartId);
     const item = items.value[index];
@@ -95,6 +100,11 @@ export const useCartStore = defineStore('cart', () => {
     }
   };
 
+  /**
+   * PROSES CHECKOUT
+   * Sinkron dengan Transaction Interface (amount_total, amount_paid, amount_change)
+   * Sinkron dengan DebtRecord Interface (amount_total, amount_remaining)
+   */
   const processCheckout = async () => {
     if (paymentMethod.value === 'Tempo' && !selectedMemberId.value) {
       throw new Error("Pelanggan (Member) wajib dipilih untuk metode pembayaran Tempo.");
@@ -107,11 +117,11 @@ export const useCartStore = defineStore('cart', () => {
       id: transactionId,
       date: now.toISOString(),
       timestamp: now.getTime(),
-      total: totalBelanja.value,
-      memberId: selectedMemberId.value,
+      amount_total: totalBelanja.value, // Updated field name
+      amount_paid: paymentMethod.value === 'Tempo' ? 0 : cashAmount.value, // Updated field name
+      amount_change: paymentMethod.value === 'Tempo' ? 0 : kembalian.value, // Updated field name
       paymentMethod: paymentMethod.value,
-      amountPaid: paymentMethod.value === 'Tempo' ? 0 : cashAmount.value,
-      change: paymentMethod.value === 'Tempo' ? 0 : kembalian.value,
+      memberId: selectedMemberId.value,
       status: TRANSACTION_STATUS.SUCCESS,
       items: deepCopy(items.value)
     };
@@ -120,6 +130,7 @@ export const useCartStore = defineStore('cart', () => {
       await db.transaction('rw', [db.transactions, db.products, db.stock_logs, db.debts], async () => {
         await db.transactions.add(transactionData);
 
+        // Pencatatan Hutang Otomatis
         if (paymentMethod.value === 'Tempo' && selectedMemberId.value) {
           const dueDate = new Date();
           dueDate.setDate(dueDate.getDate() + 30);
@@ -128,8 +139,8 @@ export const useCartStore = defineStore('cart', () => {
             id: generateUID(),
             transactionId: transactionId,
             memberId: selectedMemberId.value,
-            total_debt: totalBelanja.value,
-            remaining_debt: totalBelanja.value,
+            amount_total: totalBelanja.value, // Updated field name
+            amount_remaining: totalBelanja.value, // Updated field name
             dueDate: dueDate.toISOString(),
             status: 'unpaid',
             createdAt: now.toISOString()
@@ -137,6 +148,7 @@ export const useCartStore = defineStore('cart', () => {
           await db.debts.add(debtData);
         }
 
+        // Update Stok & Log Stok
         for (const item of items.value) {
           const p = await db.products.get(item.id);
           
@@ -175,6 +187,9 @@ export const useCartStore = defineStore('cart', () => {
     }
   };
 
+  /**
+   * ADJUSTMENT STOK
+   */
   const adjustStock = async (
     product: Product, 
     newQty: number, 

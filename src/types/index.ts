@@ -19,8 +19,8 @@ export interface StockLog {
   prevQty: number;
   changeQty: number;
   finalQty: number;
-  price_modal?: number;
-  price_sell?: number;
+  price_modal: number;
+  price_sell: number;
   referenceId?: string;
   note?: string;
   timestamp: number;
@@ -43,14 +43,6 @@ export interface Product {
   updatedAt: ISODataString;
 }
 
-export interface ProductPackage {
-  id: ID;
-  productId: ID;
-  name: string;
-  qty_pcs: number;
-  price_sell: number;
-}
-
 export interface Member {
   id: ID;
   name: string;
@@ -60,38 +52,15 @@ export interface Member {
   debt_limit?: number;
 }
 
-export interface DigitalTransaction {
-  id: ID;
-  timestamp: UnixTimestamp;
-  type: string;
-  amount: number;
-  provider: string;
-  status: TransactionStatus;
-}
-
-export interface AppSettings {
-  id: 'main_settings';
-  storeName: string;
-  address: string;
-  footerMessage: string;
-  isPrinterActive: boolean;
-}
-
 export interface DebtRecord {
   id: ID;
   transactionId: ID;
   memberId: ID;
-  total_debt: number;
-  remaining_debt: number;
+  amount_total: number;
+  amount_remaining: number;
   dueDate: ISODataString;
   status: DebtStatus;
   createdAt: ISODataString;
-}
-
-export interface ServiceItem {
-  id: ID;
-  name: string;
-  price: number;
 }
 
 export interface CartItem {
@@ -116,10 +85,10 @@ export interface Transaction {
   timestamp: UnixTimestamp;
   date: ISODataString;
   items: CartItem[];
-  total: number;
+  amount_total: number;
+  amount_paid: number;
+  amount_change: number;
   paymentMethod: PaymentMethod;
-  amountPaid: number;
-  change: number;
   memberId?: ID | null;
   status: TransactionStatus;
   note?: string;
@@ -132,4 +101,35 @@ export interface Expense {
   category: string;
   amount: number;
   note: string;
+}
+
+export interface DigitalTransaction {
+  id: ID;
+  timestamp: UnixTimestamp;
+  type: string;
+  amount: number;
+  provider: string;
+  status: TransactionStatus;
+}
+
+export interface AppSettings {
+  id: 'main_settings';
+  storeName: string;
+  address: string;
+  footerMessage: string;
+  isPrinterActive: boolean;
+}
+
+export interface ProductPackage {
+  id: ID;
+  productId: ID;
+  name: string;
+  qty_pcs: number;
+  price_sell: number;
+}
+
+export interface ServiceItem {
+  id: ID;
+  name: string;
+  price: number;
 }

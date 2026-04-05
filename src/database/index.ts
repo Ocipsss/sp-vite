@@ -17,7 +17,7 @@ export const DEXIE_SCHEMA = {
   products: 'id, name, code, category, qty, updatedAt',
   product_packages: 'id, name, productId',
   categories: 'id, name',
-  transactions: 'id, timestamp, date, memberId, status', 
+  transactions: 'id, timestamp, date, memberId, status, paymentMethod', 
   members: 'id, name, phone',
   expenses: 'id, timestamp, date, category', 
   services: 'id, name, price',
@@ -44,7 +44,8 @@ export class SinarPagiDB extends Dexie {
 
   constructor() {
     super('SinarPagiDB');
-    this.version(25).stores(DEXIE_SCHEMA);
+    // Versi 26: Perubahan nama kolom finansial ke amount_
+    this.version(26).stores(DEXIE_SCHEMA);
   }
 }
 
