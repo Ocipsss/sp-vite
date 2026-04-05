@@ -91,24 +91,3 @@ export function useDashboard() {
     loadStats
   };
 }
-
-
-
-// DESKRIPSI KESELURUHAN FILE:
-// File ini adalah modul logika dashboard (useDashboard.ts) yang berfungsi sebagai mesin pengolah data statistik utama untuk aplikasi Sinar Pagi. Menggunakan pola Vue Composable, file ini secara otomatis menarik data mentah dari berbagai tabel database lokal (transaksi, produk, pengeluaran, dan member) lalu mengolahnya menjadi informasi finansial yang siap pakai. Modul ini bertanggung jawab menghitung performa toko secara real-time, mulai dari omzet harian, sisa piutang pelanggan, hingga nilai total aset barang yang ada di gudang, sehingga pemilik toko dapat mengambil keputusan bisnis dengan cepat berdasarkan data akurat.
-
-// PENJELASAN FUNGSI TIAP BARIS:
-// Baris 1-2: Impor dependensi; mengambil fungsi reaktivitas Vue (ref, onMounted) dan koneksi database Dexie (db).
-// Baris 4-13: Definisi state stats; variabel reaktif yang menampung objek ringkasan keuangan seperti omzet, stok kritis, total piutang, laba bersih harian, nilai aset stok, dan pengeluaran.
-// Baris 15: Definisi state topMembers; variabel reaktif untuk menyimpan daftar 10 pelanggan dengan poin loyalitas tertinggi.
-// Baris 17-20: Inisialisasi fungsi loadStats; fungsi asinkron utama untuk mengambil dan memproses data dari database. Mendapatkan tanggal hari ini dalam format ISO (YYYY-MM-DD).
-// Baris 22-26: Query Transaksi Hari Ini; mengambil semua data penjualan yang terjadi pada tanggal hari ini dari tabel transactions.
-// Baris 28-40: Logika Hitung Omzet & Laba Kotor; melakukan perulangan (forEach) pada transaksi hari ini untuk menjumlahkan total uang masuk serta menghitung selisih harga jual dan modal per item.
-// Baris 42-50: Query & Hitung Pengeluaran; mengambil data pengeluaran operasional hari ini dan menjumlahkan total nominalnya (totalExpenses).
-// Baris 52-58: Analisa Produk & Aset; mengambil seluruh data produk untuk menghitung jumlah barang yang stoknya di bawah 5 (stokKritis) serta total nilai uang yang mengendap di gudang (nilaiStok).
-// Baris 60-68: Analisa Piutang; melakukan filter pada database untuk menjumlahkan seluruh nilai transaksi yang berstatus 'hutang' atau belum lunas.
-// Baris 70-77: Finalisasi Stats; menggabungkan seluruh hasil perhitungan ke dalam state 'stats', termasuk pengurangan laba kotor dengan biaya pengeluaran untuk mendapatkan laba bersih hari ini.
-// Baris 79-82: Pemeringkatan Member; mengambil seluruh data pelanggan dan mengurutkannya berdasarkan jumlah poin terbanyak untuk menampilkan 10 besar member loyal.
-// Baris 84-86: Error Handling; menangkap dan menampilkan log error ke konsol jika terjadi kegagalan saat pengambilan data dari database.
-// Baris 89: Lifecycle onMounted; memastikan fungsi loadStats langsung berjalan otomatis segera setelah dashboard dibuka oleh pengguna.
-// Baris 91-95: Return Value; mengekspos variabel stats, topMembers, dan fungsi loadStats agar bisa digunakan di dalam komponen UI Dashboard.
