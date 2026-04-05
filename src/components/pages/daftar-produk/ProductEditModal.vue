@@ -125,24 +125,3 @@ onUnmounted(() => window.removeEventListener('barcode-scanned-edit', handleScan)
   to { transform: translateY(0); opacity: 1; }
 }
 </style>
-
-
-
-<!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen ProductEditModal.vue yang berfungsi sebagai antarmuka penyuntingan data produk (Edit Form) dalam bentuk jendela sembulan (modal) yang muncul dari bawah layar (slide-up). Dirancang khusus untuk pengalaman mobile, komponen ini menyediakan formulir lengkap untuk memperbarui informasi vital barang seperti nama, kategori, harga modal/jual, hingga stok. Komponen ini memiliki fitur pemformatan angka otomatis (auto-format ribuan) saat mengetik harga dan mendukung integrasi pemindai barcode eksternal melalui event listener, memastikan proses pembaruan data inventaris tetap cepat dan akurat.
-
-PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-2: Pembungkus utama modal (overlay); menggunakan efek blur latar belakang dan deteksi klik di luar area (click.self) untuk menutup modal secara instan.
-Baris 3-10: Bagian Header Modal; menampilkan judul "Update Produk" dengan gaya tipografi tebal dan tombol tutup (close) dengan ikon silang yang memiliki efek transisi saat ditekan.
-Baris 13-16: Input Nama Produk; kolom teks untuk mengubah nama barang yang secara otomatis dikonversi menjadi huruf kapital (uppercase) melalui kelas CSS.
-Baris 18-28: Input Kategori; menggunakan elemen select dinamis yang merender daftar kategori dari database, dilengkapi dengan ikon panah khusus untuk mempertegas identitas visual dropdown.
-Baris 30-49: Grid Harga Modal & Jual; dua kolom input berdampingan dengan skema warna kontras (merah untuk modal, biru untuk jual) yang memudahkan kasir membedakan pengeluaran dan pendapatan.
-Baris 51-60: Grid Stok & Satuan; kolom untuk memperbarui jumlah fisik barang (qty) dan satuan hitungnya (seperti PCS, DUS, atau BKS) secara sejajar.
-Baris 63-71: Tombol Simpan (BaseButton); tombol utama berukuran besar yang mengirimkan data formulir yang sudah diubah (form) kembali ke komponen induk melalui event 'save'.
-Baris 75-81: Definisi Props & Emits; menerima data produk yang akan diedit serta daftar kategori, dan menyediakan saluran komunikasi untuk event tutup serta simpan.
-Baris 83-89: Konfigurasi UI (Style Objects); mendefinisikan kumpulan kelas Tailwind CSS dalam satu objek untuk menjaga kerapian kode template dan memudahkan pemeliharaan gaya visual.
-Baris 91-93: Inisialisasi Form; menduplikasi data produk dari props ke dalam variabel reaktif 'form' agar perubahan di formulir tidak langsung mengubah data asli sebelum disimpan.
-Baris 95-103: Fungsi updatePrice; logika cerdas yang membersihkan input dari karakter non-angka, memperbarui nilai numerik di database, dan memformat ulang tampilan angka dengan pemisah ribuan secara real-time.
-Baris 105-108: Fungsi handleScan; memungkinkan pengisian atau perubahan kode barcode produk secara otomatis jika ada sinyal dari alat pemindai (scanner).
-Baris 110-111: Lifecycle onMounted & onUnmounted; mendaftarkan dan membersihkan event listener global untuk barcode guna mencegah kebocoran memori (memory leak) saat modal ditutup.
-Baris 114-122: Animasi CSS; mendefinisikan efek 'slide-up' dengan kurva bezier khusus untuk memberikan kesan gerakan yang membal (bouncy) dan premium saat modal muncul. -->
