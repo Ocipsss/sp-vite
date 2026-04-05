@@ -6,6 +6,9 @@ import type {
   Expense, 
   Member, 
   ServiceItem,
+  DigitalTransaction,
+  AppSettings,
+  DebtRecord,
   ID 
 } from '@/types';
 
@@ -16,9 +19,10 @@ export const DEXIE_SCHEMA = {
   transactions: 'id, timestamp, date, memberId, status', 
   members: 'id, name, phone',
   expenses: 'id, timestamp, date, category', 
-  services: 'id, name',
+  services: 'id, name, price',
   digital_transactions: 'id, timestamp',
-  settings: 'id'
+  settings: 'id',
+  debts: 'id, transactionId, memberId, status, dueDate' 
 };
 
 export const DB_TABLES = Object.keys(DEXIE_SCHEMA);
@@ -31,12 +35,13 @@ export class SinarPagiDB extends Dexie {
   members!: Table<Member>;
   expenses!: Table<Expense>;
   services!: Table<ServiceItem>;
-  digital_transactions!: Table<any>;
-  settings!: Table<any>;
+  digital_transactions!: Table<DigitalTransaction>;
+  settings!: Table<AppSettings>;
+  debts!: Table<DebtRecord>;
 
   constructor() {
     super('SinarPagiDB');
-    this.version(23).stores(DEXIE_SCHEMA);
+    this.version(24).stores(DEXIE_SCHEMA);
   }
 }
 

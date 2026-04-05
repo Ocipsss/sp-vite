@@ -35,6 +35,48 @@ export interface ProductPackage {
   price_sell: number;
 }
 
+export interface Member {
+  id: ID;
+  name: string;
+  phone?: string;
+  points?: number;
+  address?: string;
+  debt_limit?: number;
+}
+
+export interface DigitalTransaction {
+  id: ID;
+  timestamp: UnixTimestamp;
+  type: string;
+  amount: number;
+  provider: string;
+  status: TransactionStatus;
+}
+
+export interface AppSettings {
+  id: 'main_settings';
+  storeName: string;
+  address: string;
+  footerMessage: string;
+  isPrinterActive: boolean;
+}
+
+export interface DebtRecord {
+  id: ID;
+  transactionId: ID;
+  memberId: ID;
+  total_debt: number;
+  remaining_debt: number;
+  dueDate: ISODataString;
+  status: DebtStatus;
+}
+
+export interface ServiceItem {
+  id: ID;
+  name: string;
+  price: number;
+}
+
 export interface CartItem {
   cartId: ID;
   id: ID;
@@ -72,29 +114,4 @@ export interface Expense {
   category: string;
   amount: number;
   note: string;
-}
-
-export interface DebtRecord {
-  id: ID;
-  transactionId: ID;
-  memberId: ID;
-  total_debt: number;
-  remaining_debt: number;
-  dueDate: ISODataString;
-  status: DebtStatus;
-}
-
-export interface Member {
-  id: ID;
-  name: string;
-  phone?: string;
-  points?: number;
-  address?: string;
-  debt_limit?: number;
-}
-
-export interface ServiceItem {
-  id: ID;
-  name: string;
-  price: number;
 }
