@@ -50,8 +50,7 @@ const onScanSuccess = async (decodedText: string) => {
     const product = await db.table('products').where('code').equals(decodedText).first();
     
     if (navigator.vibrate) navigator.vibrate(100);
-
-    // LOGIKA CABANG:
+    
     if (props.mode === 'inventory') {
       emit('detected', { code: decodedText, product: product || null });
       closeScanner();
@@ -89,22 +88,3 @@ onMounted(async () => {
 
 onBeforeUnmount(() => stopScanner());
 </script>
-
-
-
-<!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen ScannerOverlay.vue yang berfungsi sebagai antarmuka pemindai barcode berbasis kamera (Camera-based Barcode Scanner) untuk aplikasi Sinar Pagi POS. Komponen ini dirancang dengan tampilan layar penuh (fixed overlay) yang modern, dilengkapi dengan elemen visual seperti garis laser pemindai (scanning line) dan indikator status kamera. Keunggulan utama komponen ini adalah "Logika Cabang" yang memungkinkannya bekerja dalam dua mode: Mode Kasir (langsung memasukkan barang ke keranjang) dan Mode Inventaris (mencari data produk untuk pengeditan stok), memberikan fleksibilitas tinggi dalam operasional toko.
-
-PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-2: Pembungkus utama overlay (fixed inset-0) dengan latar belakang putih dan animasi zoom-in untuk memberikan transisi visual yang halus saat scanner dibuka.
-Baris 3-10: Bagian Header; menampilkan judul mode scanner (Inventaris atau Kasir) secara dinamis dan teks petunjuk arah barcode dengan tipografi yang tebal dan bersih.
-Baris 11-16: Tombol Tutup (Close); tombol melingkar dengan ikon silang untuk membatalkan proses pemindaian dan menutup overlay kamera.
-Baris 19-21: Kontainer Kamera (id="reader"); wadah tempat feed video kamera muncul. Memiliki sudut membulat (rounded-2xl) dan garis laser biru animasi (animate-pulse) untuk membantu pengguna membidik barcode.
-Baris 23-31: Bagian Footer; menampilkan indikator "Kamera Ready" dengan lampu hijau berkedip serta branding sistem "Sinar Pagi POS" sebagai identitas aplikasi.
-Baris 35-39: Impor Modul; mengambil fungsi lifecycle Vue, akses ke Cart Store (untuk kasir), composable scanner, dan koneksi database Dexie (db).
-Baris 41-44: Definisi Props; menerima properti 'mode' untuk menentukan perilaku scanner (default ke 'cashier').
-Baris 46-48: Inisialisasi Emit & Store; mendefinisikan event keluar ('close' & 'detected') serta mengaktifkan fungsi keranjang belanja dan mesin pemindai.
-Baris 50-71: Fungsi onScanSuccess; logika utama setelah barcode terdeteksi. Mencari produk di database lokal, memberikan respon getar (vibrate), dan menentukan apakah data dikirim ke form inventaris atau langsung ke keranjang kasir.
-Baris 73-80: Fungsi closeScanner; memastikan proses kamera dihentikan (stopScanner) sebelum menutup overlay untuk menghemat baterai dan menjaga privasi pengguna.
-Baris 82-90: Lifecycle onMounted; memicu startScanner setelah DOM siap (nextTick) dengan sedikit penundaan (timeout) untuk memastikan inisialisasi kamera berjalan stabil tanpa lag.
-Baris 92: Lifecycle onBeforeUnmount; memastikan kamera otomatis mati saat pengguna berpindah halaman atau menutup komponen guna mencegah kebocoran memori. -->

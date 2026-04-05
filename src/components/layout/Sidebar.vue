@@ -62,25 +62,3 @@ const getMenuClass = (page: string) => [
     : 'text-slate-400 hover:text-white hover:bg-white/5'
 ];
 </script>
-
-
-
-<!-- 
-DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen Sidebar yang berfungsi sebagai pusat navigasi utama dan kontrol sinkronisasi data untuk aplikasi Sinar Pagi POS. Sidebar ini dirancang khusus untuk penggunaan mobile dengan lebar 70% dari layar, menggunakan skema warna gelap yang elegan (#0f172a). Komponen ini secara dinamis merender menu berdasarkan pengelompokan yang sudah ditentukan, memberikan indikator visual untuk halaman yang sedang aktif, serta menyediakan tombol khusus untuk memicu proses sinkronisasi database cloud (Firebase) ke penyimpanan lokal.
-
-PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-2: Pembungkus utama Sidebar (aside) dengan posisi tetap (fixed), lebar 70%, dan fitur scroll otomatis yang disembunyikan (no-scrollbar).
-Baris 3-10: Bagian Branding; menampilkan nama aplikasi "SINAR PAGI" dengan tipografi tebal (black), warna kuning emas, dan efek bayangan cahaya (drop-shadow) untuk kesan premium.
-Baris 12-25: Area Navigasi Utama; menggunakan perulangan (v-for) ganda untuk merender grup menu dan item menu di dalamnya secara dinamis.
-Baris 15-18: Item Menu; menangani aksi klik untuk berpindah halaman dan menerapkan kelas CSS dinamis untuk menandai menu mana yang sedang aktif.
-Baris 20-22: Garis pemisah (divider); menampilkan garis tipis antar grup menu kecuali pada grup terakhir agar tampilan tetap rapi.
-Baris 28-44: Bagian Footer Sidebar; berisi tombol "Update Data" untuk memicu sinkronisasi cloud.
-Baris 32-35: Logika tombol sinkronisasi; berubah warna dan status menjadi disabled (non-aktif) saat proses pulling data sedang berlangsung.
-Baris 37-39: Ikon awan (cloud); menggunakan animasi bounce (memantul) saat proses sinkronisasi aktif untuk memberikan umpan balik visual kepada pengguna.
-Baris 40-45: Teks status tombol; menampilkan pesan "Proses..." atau "Update Data" berdasarkan status variabel isPulling.
-Baris 49-51: Bagian script setup; mengimpor reaktivitas Vue, rute saat ini, dan konstanta daftar menu (MENU_GROUPS).
-Baris 53-54: Definisi Props (isPulling) dan Emits (navigate, sync) sebagai sarana komunikasi data dengan komponen induk.
-Baris 56-57: Inisialisasi rute dan variabel computed activePage untuk mendeteksi nama halaman yang sedang dibuka oleh pengguna.
-Baris 59-65: Fungsi getMenuClass; logika penentu gaya CSS. Memberikan warna kuning emas dan latar belakang transparan jika menu cocok dengan halaman aktif, atau warna abu-abu (slate) jika tidak aktif.
--->
