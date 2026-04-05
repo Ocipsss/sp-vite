@@ -189,25 +189,3 @@ const selectAll = (e: FocusEvent) => {
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
-
-
-
-<!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen formulir produk (ProductForm.vue) yang berfungsi sebagai antarmuka utama untuk memasukkan barang baru atau memperbarui stok di aplikasi Sinar Pagi. Komponen ini dirancang dengan fitur "Smart Inventory" yang sangat lengkap, mencakup pemindai barcode terintegrasi, pengunggah foto produk, hingga sistem saran otomatis (autocomplete) saat mengetik nama produk. Salah satu fitur tercanggihnya adalah "Wholesale Calculator" yang membantu kasir menghitung harga modal per pcs secara otomatis saat membeli barang dalam jumlah grosir (seperti dus atau pak), memastikan akurasi data keuangan tetap terjaga tanpa perhitungan manual.
-
-PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-9: Kontainer & Scanner; pembungkus utama halaman dengan fitur scroll halus dan pemanggilan komponen ScannerOverlay yang muncul saat kasir ingin memindai barcode produk.
-Baris 11-14: Photo Uploader; modul di bagian atas formulir untuk mengambil atau mengunggah gambar produk guna mempermudah identifikasi visual barang.
-Baris 17-21: Tombol Reset/Batal; tombol cerdas yang muncul jika sistem mendeteksi barang yang sedang diinput sudah ada di database, memungkinkan kasir untuk beralih kembali ke mode "Barang Baru".
-Baris 22-31: Input Nama & Suggestion; kolom input nama produk yang terhubung ke sistem autocomplete. Saat kasir mengetik, aplikasi akan mencari nama produk serupa di database dan menampilkannya di bawah input.
-Baris 33-47: Dropdown Saran; panel yang menampilkan hasil pencarian produk lama lengkap dengan info harga dan sisa stok, memungkinkan kasir untuk memilih produk yang sudah ada daripada menginput ulang.
-Baris 50-68: Input Barcode; kolom untuk kode produk yang dilengkapi tombol pintasan biru untuk mengaktifkan kamera pemindai (scanner) secara instan.
-Baris 70-83: Seleksi Kategori; dropdown dinamis yang merender daftar kategori dari database (seperti Umum, Snack, Rokok) untuk pengelompokan laporan penjualan.
-Baris 85-89: Wholesale Calculator; komponen pembantu yang muncul untuk membantu pembagian harga grosir ke harga satuan secara otomatis.
-Baris 93-109: Input Harga Modal & Jual; dua kolom input harga yang memiliki skema warna berbeda (merah untuk pengeluaran/modal dan hijau untuk pendapatan/jual) dengan pemformatan mata uang otomatis.
-Baris 111-124: Input Stok; kolom numerik untuk mengisi jumlah fisik barang. Label akan berubah secara dinamis menjadi "Tambah Stok" jika produk tersebut sudah terdaftar sebelumnya.
-Baris 126-133: Tombol Simpan; tombol aksi utama yang menunjukkan status loading (spinner) saat proses penyimpanan ke database sedang berlangsung.
-Baris 140-154: Logic Imports; memisahkan logika utama formulir ke dalam composable 'useProductForm' untuk menjaga kode tetap bersih, serta mengelola status scanner.
-Baris 156-166: handleScanResult; fungsi cerdas yang memproses hasil scan kamera; jika barcode sudah ada di sistem, ia akan memberi peringatan dan memuat data produk tersebut secara otomatis.
-Baris 173-179: selectAll; fungsi peningkatan pengalaman pengguna (UX) yang secara otomatis menyeleksi seluruh teks dalam kolom saat ditekan, mempermudah penghapusan dan penggantian nilai dengan cepat di perangkat mobile.
-Baris 183-186: Styling; CSS khusus untuk menyembunyikan scrollbar agar tampilan formulir terlihat lebih luas dan bersih di layar smartphone. -->

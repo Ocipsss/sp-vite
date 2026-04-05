@@ -44,19 +44,3 @@ import type { CartItem } from "@/types";
 defineProps<{ item: CartItem }>();
 const cart = useCartStore();
 </script>
-
-
-
-<!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen CartItemCard.vue yang berfungsi sebagai Kartu Item di dalam keranjang belanja aplikasi Sinar Pagi POS. Komponen ini dirancang khusus untuk menangani interaksi cepat kasir saat mengatur jumlah (quantity) barang maupun jumlah jasa tambahan (seperti jasa giling atau seduh) dalam satu tampilan yang ringkas. Dengan desain berbasis baris yang intuitif, kasir dapat melihat detail harga satuan, total barang, serta biaya ekstra secara transparan sebelum melanjutkan ke proses pembayaran.
-
-PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-3: Kontainer Utama; menggunakan latar belakang abu-abu sangat muda (bg-slate-50) dengan sudut melengkung besar (rounded-4xl) untuk memberikan kesan modern dan bersih pada daftar belanjaan.
-Baris 4-10: Informasi Produk; menampilkan nama produk dalam format huruf besar (uppercase) dan tebal. Menggunakan 'truncate' agar nama produk yang sangat panjang tidak berantakan dan tetap rapi di layar ponsel.
-Baris 11-13: Detail Harga & Qty; menyajikan informasi harga jual satuan dikalikan dengan jumlah yang sudah masuk ke keranjang, memudahkan kasir melakukan verifikasi harga sekilas.
-Baris 16-20: Kontrol Jumlah Barang; menyediakan tombol minus (-) berwarna merah dan plus (+) berwarna biru. Tombol ini terhubung langsung ke fungsi 'updateQty' di Pinia Store untuk menambah atau mengurangi stok di keranjang secara real-time.
-Baris 24: Logika Biaya Tambahan (v-if); area ini hanya akan muncul jika barang tersebut memiliki biaya jasa tambahan (extra charge). Ini menjaga antarmuka tetap bersih untuk barang yang tidak memiliki jasa ekstra.
-Baris 25-33: Panel Jasa Ekstra; menggunakan warna latar biru muda (bg-blue-50) untuk membedakannya dari item utama. Menampilkan nama jasa (misal: "JASA GILING") serta perhitungan harga jasanya.
-Baris 34-38: Kontrol Jumlah Jasa; menyediakan tombol kontrol khusus untuk menambah atau mengurangi jumlah jasa yang diberikan, terpisah dari jumlah produk utamanya. Sangat berguna jika pelanggan membeli 5 kopi tapi hanya ingin 3 di antaranya diseduh di tempat.
-Baris 44-49: Bagian Script; mengimpor store keranjang (useCartStore) untuk mengelola data belanjaan, fungsi 'formatRupiah' untuk tampilan uang, dan tipe data 'CartItem' untuk memastikan keamanan struktur data.
-Baris 51-52: Props & Store; mendefinisikan bahwa komponen ini menerima data 'item' dari daftar keranjang dan menghubungkan tombol-tombol aksi ke pusat kendali belanja (cart store). -->

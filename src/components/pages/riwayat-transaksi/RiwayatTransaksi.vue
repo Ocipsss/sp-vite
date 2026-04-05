@@ -93,21 +93,3 @@ onMounted(loadTransactions);
   scrollbar-width: none;
 }
 </style>
-
-
-
-<!-- DESKRIPSI KESELURUHAN FILE:
-File ini adalah komponen Riwayat Transaksi (TransactionHistory.vue) yang berfungsi sebagai pusat arsip digital untuk memantau seluruh aktivitas penjualan di aplikasi Sinar Pagi POS. Komponen ini dirancang untuk menampilkan daftar nota belanja terbaru (hingga 50 transaksi terakhir) yang diurutkan secara terbalik (dari yang paling baru ke lama). Selain sebagai penampil data, file ini juga bertindak sebagai pengendali fitur pasca-transaksi seperti cetak ulang struk (reprint), pengeditan status, dan pemantauan real-time dari database lokal Dexie, memastikan kasir dapat melacak riwayat pendapatan dengan cepat dan akurat.
-
-PENJELASAN FUNGSI TIAP BARIS:
-Baris 1-2: Pembungkus Utama; kontainer dengan lebar penuh (w-full) yang menggunakan latar belakang slate lembut dan fitur 'no-scrollbar' agar tampilan tetap bersih di perangkat mobile.
-Baris 3-13: Iterasi Transaksi (v-for); merender setiap nota belanja menggunakan komponen TransactionItem secara dinamis, serta mengelola state pengeditan (is-editing) untuk masing-masing item.
-Baris 15-22: State Kosong (Empty State); memberikan umpan balik visual berupa ikon daftar dan teks peringatan jika database transaksi masih kosong atau belum ada penjualan yang tercatat.
-Baris 24-26: Indikator Loading; menampilkan animasi pulse "Memuat Data" saat aplikasi sedang melakukan query ke database untuk memberikan kesan responsif kepada pengguna.
-Baris 31-38: Interface Transaction; kontrak data TypeScript yang mendefinisikan struktur objek transaksi, mencakup ID, tanggal, total belanja, status, metode bayar, dan daftar barang.
-Baris 40-42: Inisialisasi State; variabel reaktif untuk menyimpan array transaksi, status loading (isLoading), dan ID transaksi yang sedang dalam mode edit (editingId).
-Baris 44-59: Fungsi loadTransactions; logika pengambilan data asinkron dari tabel 'transactions'. Menggunakan pengurutan berdasarkan tanggal terbaru dan membatasi hasil hanya 50 data untuk menjaga performa aplikasi.
-Baris 61-63: Fungsi toggleEdit; mengatur mekanisme buka-tutup panel edit pada item transaksi tertentu; jika ID yang sama diklik lagi, maka panel akan tertutup (null).
-Baris 65-78: Fungsi reprint; fitur cetak ulang struk belanja. Fungsi ini memberikan respon getar (vibrate) pada perangkat mobile, lalu mengirimkan data transaksi melalui Event Global ('print-struk') agar ditangkap oleh printer thermal.
-Baris 80: Lifecycle onMounted; memicu pemuatan data transaksi secara otomatis segera setelah halaman riwayat dibuka oleh pengguna.
-Baris 83-91: Gaya Scoped (no-scrollbar); konfigurasi CSS khusus untuk menyembunyikan batang gulung (scrollbar) di berbagai browser (Chrome, Safari, Edge, Firefox) agar antarmuka terlihat lebih modern dan luas. -->
