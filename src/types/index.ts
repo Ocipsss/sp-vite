@@ -19,6 +19,8 @@ export interface StockLog {
   prevQty: number;
   changeQty: number;
   finalQty: number;
+  price_modal?: number;
+  price_sell?: number;
   referenceId?: string;
   note?: string;
   timestamp: number;

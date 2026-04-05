@@ -23,7 +23,7 @@ export const DEXIE_SCHEMA = {
   services: 'id, name, price',
   digital_transactions: 'id, timestamp',
   settings: 'id',
-  debts: 'id, transactionId, memberId, status, dueDate' ,
+  debts: 'id, transactionId, memberId, status, dueDate',
   stock_logs: 'id, productId, type, timestamp'
 };
 

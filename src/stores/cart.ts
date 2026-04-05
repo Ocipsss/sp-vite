@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { db, generateUID } from '@/database';
-import type { CartItem, Product, Transaction, PaymentMethod } from '@/types';
+import type { CartItem, Product, Transaction, PaymentMethod, StockMutationType } from '@/types';
 import { calculateCartTotal, calculateChange } from '@/utils/calculators';
 import { deepCopy } from '@/utils/formatters';
 import { TRANSACTION_STATUS } from '@/constants/app';
@@ -13,6 +13,7 @@ export const useCartStore = defineStore('cart', () => {
   const isScannerOpen = ref(false);
   const selectedMemberId = ref<string | null>(null);
   const searchQuery = ref<string>("");
+  
   const totalBelanja = computed(() => calculateCartTotal(items.value));
   const kembalian = computed(() => calculateChange(cashAmount.value, totalBelanja.value));
 
@@ -127,8 +128,10 @@ export const useCartStore = defineStore('cart', () => {
               prevQty: p.qty,
               changeQty: totalReduce,
               finalQty: finalQty,
+              price_modal: item.price_modal,
+              price_sell: item.price_sell,
               referenceId: transactionId,
-              note: `Penjualan: ${item.name} ${item.qty_reduce && item.qty_reduce > 1 ? '(Grosir/Paket)' : ''}`,
+              note: `Jual ${item.qty} ${multiplier > 1 ? 'Paket' : item.unit} (@${multiplier} ${item.unit})`,
               timestamp: now.getTime()
             });
           }
@@ -139,6 +142,41 @@ export const useCartStore = defineStore('cart', () => {
       return transactionId;
     } catch (error) {
       console.error("Checkout Gagal:", error);
+      throw error;
+    }
+  };
+
+  const adjustStock = async (
+    product: Product, 
+    newQty: number, 
+    type: StockMutationType = 'ADJUSTMENT', 
+    note: string = 'Koreksi Stok Manual'
+  ) => {
+    const now = new Date();
+    const changeQty = Math.abs(newQty - product.qty);
+
+    try {
+      await db.transaction('rw', [db.products, db.stock_logs], async () => {
+        await db.products.update(product.id, {
+          qty: newQty,
+          updatedAt: now.toISOString()
+        });
+
+        await db.stock_logs.add({
+          id: generateUID(),
+          productId: product.id,
+          type: type,
+          prevQty: product.qty,
+          changeQty: changeQty,
+          finalQty: newQty,
+          price_modal: product.price_modal,
+          price_sell: product.price_sell,
+          note: note,
+          timestamp: now.getTime()
+        });
+      });
+    } catch (error) {
+      console.error("Gagal melakukan koreksi stok:", error);
       throw error;
     }
   };
@@ -154,7 +192,7 @@ export const useCartStore = defineStore('cart', () => {
   return { 
     items, paymentMethod, cashAmount, isScannerOpen, selectedMemberId, searchQuery,
     totalBelanja, kembalian, 
-    addToCart, updateQty, processCheckout, resetCart, toggleScanner, clearSearch,
+    addToCart, updateQty, processCheckout, adjustStock, resetCart, toggleScanner, clearSearch,
     setExtraCharge, updateExtraQty, removeExtraCharge
   };
 });
