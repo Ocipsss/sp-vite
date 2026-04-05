@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { db, generateUID } from '@/database';
-import type { CartItem, Product, Transaction, PaymentMethod, StockMutationType, DebtRecord } from '@/types';
+import type { CartItem, Product, Transaction, PaymentMethod, StockMutationType, DebtRecord, TransactionStatus } from '@/types';
 import { calculateCartTotal, calculateChange } from '@/utils/calculators';
 import { deepCopy } from '@/utils/formatters';
 import { TRANSACTION_STATUS } from '@/constants/app';
@@ -43,6 +43,11 @@ export const useCartStore = defineStore('cart', () => {
 
     if (item) {
       item.qty += change;
+      // Sinkronisasi extraChargeQty jika ada biaya tambahan
+      if (item.extraChargeName && item.extraChargeQty !== undefined) {
+         item.extraChargeQty = Math.max(0, item.extraChargeQty + change);
+      }
+      
       if (item.qty <= 0) {
         items.value.splice(index, 1);
       }
@@ -102,53 +107,63 @@ export const useCartStore = defineStore('cart', () => {
 
   /**
    * PROSES CHECKOUT
-   * Sinkron dengan Transaction Interface (amount_total, amount_paid, amount_change)
-   * Sinkron dengan DebtRecord Interface (amount_total, amount_remaining)
+   * Mengakomodasi: Sukses, Tempo (Pending), dan Cicilan (Partial)
    */
   const processCheckout = async () => {
-    if (paymentMethod.value === 'Tempo' && !selectedMemberId.value) {
-      throw new Error("Pelanggan (Member) wajib dipilih untuk metode pembayaran Tempo.");
+    const isTempo = paymentMethod.value === 'Tempo';
+    // Cek apakah pembayaran kurang (Parsial/Cicilan)
+    const isPartial = !isTempo && cashAmount.value > 0 && cashAmount.value < totalBelanja.value;
+
+    if ((isTempo || isPartial) && !selectedMemberId.value) {
+      throw new Error("Pelanggan (Member) wajib dipilih untuk metode pembayaran Tempo atau Cicilan.");
     }
 
     const transactionId = generateUID();
     const now = new Date();
     
+    // Tentukan status berdasarkan kondisi pembayaran
+    let finalStatus: TransactionStatus = 'success';
+    if (isTempo) finalStatus = 'pending';
+    if (isPartial) finalStatus = 'partial';
+
     const transactionData: Transaction = {
       id: transactionId,
       date: now.toISOString(),
       timestamp: now.getTime(),
-      amount_total: totalBelanja.value, // Updated field name
-      amount_paid: paymentMethod.value === 'Tempo' ? 0 : cashAmount.value, // Updated field name
-      amount_change: paymentMethod.value === 'Tempo' ? 0 : kembalian.value, // Updated field name
+      amount_total: totalBelanja.value,
+      amount_paid: isTempo ? 0 : cashAmount.value,
+      amount_change: isTempo || isPartial ? 0 : kembalian.value,
       paymentMethod: paymentMethod.value,
       memberId: selectedMemberId.value,
-      status: TRANSACTION_STATUS.SUCCESS,
+      status: finalStatus,
       items: deepCopy(items.value)
     };
 
     try {
       await db.transaction('rw', [db.transactions, db.products, db.stock_logs, db.debts], async () => {
+        // 1. Catat Transaksi
         await db.transactions.add(transactionData);
 
-        // Pencatatan Hutang Otomatis
-        if (paymentMethod.value === 'Tempo' && selectedMemberId.value) {
+        // 2. Catat Piutang jika belum lunas (Tempo atau Parsial)
+        if (isTempo || isPartial) {
+          const remainingDebt = totalBelanja.value - (isTempo ? 0 : cashAmount.value);
           const dueDate = new Date();
-          dueDate.setDate(dueDate.getDate() + 30);
+          dueDate.setDate(dueDate.getDate() + 30); // Default 30 hari
 
           const debtData: DebtRecord = {
             id: generateUID(),
             transactionId: transactionId,
-            memberId: selectedMemberId.value,
-            amount_total: totalBelanja.value, // Updated field name
-            amount_remaining: totalBelanja.value, // Updated field name
+            memberId: selectedMemberId.value!,
+            amount_total: totalBelanja.value,
+            amount_remaining: remainingDebt,
             dueDate: dueDate.toISOString(),
-            status: 'unpaid',
+            status: isPartial ? 'partial' : 'unpaid',
             createdAt: now.toISOString()
           };
           await db.debts.add(debtData);
         }
 
-        // Update Stok & Log Stok
+        // 3. Update Stok & Log (Audit Trail)
         for (const item of items.value) {
           const p = await db.products.get(item.id);
           
@@ -172,7 +187,7 @@ export const useCartStore = defineStore('cart', () => {
               price_modal: item.price_modal,
               price_sell: item.price_sell,
               referenceId: transactionId,
-              note: `Jual ${item.qty} ${multiplier > 1 ? 'Paket' : item.unit} (@${multiplier} ${item.unit}). Total: -${totalReduce} ${item.unit}`,
+              note: `Jual ${item.qty} ${multiplier > 1 ? 'Paket' : item.unit} (@${multiplier} ${item.unit}). Status: ${finalStatus}`,
               timestamp: now.getTime()
             });
           }

@@ -2,8 +2,10 @@ export type ID = string;
 export type ISODataString = string;
 export type UnixTimestamp = number;
 export type PaymentMethod = 'Tunai' | 'QRIS' | 'Tempo';
-export type TransactionStatus = 'success' | 'pending' | 'canceled';
-export type DebtStatus = 'unpaid' | 'partial' | 'paid';
+// Tambahan 'partial' untuk mendukung cicilan di level transaksi
+export type TransactionStatus = 'success' | 'pending' | 'canceled' | 'partial';
+// Tambahan 'overdue' untuk peringatan jatuh tempo
+export type DebtStatus = 'unpaid' | 'partial' | 'paid' | 'overdue';
 
 export interface WholesaleConfig {
   min_qty: number;

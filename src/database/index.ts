@@ -14,16 +14,19 @@ import type {
 } from '@/types';
 
 export const DEXIE_SCHEMA = {
+  // Ditambahkan index 'category' dan 'code' untuk pencarian produk yang lebih cepat
   products: 'id, name, code, category, qty, updatedAt',
   product_packages: 'id, name, productId',
   categories: 'id, name',
+  // Index pada 'memberId', 'status', dan 'paymentMethod' untuk laporan filter transaksi
   transactions: 'id, timestamp, date, memberId, status, paymentMethod', 
   members: 'id, name, phone',
   expenses: 'id, timestamp, date, category', 
   services: 'id, name, price',
   digital_transactions: 'id, timestamp',
   settings: 'id',
-  debts: 'id, transactionId, memberId, status, dueDate',
+  // PENTING: Index 'amount_remaining' dan 'dueDate' ditambahkan untuk fitur manajemen hutang/piutang
+  debts: 'id, transactionId, memberId, status, dueDate, amount_remaining',
   stock_logs: 'id, productId, type, timestamp'
 };
 
@@ -44,14 +47,21 @@ export class SinarPagiDB extends Dexie {
 
   constructor() {
     super('SinarPagiDB');
-    // Versi 26: Perubahan nama kolom finansial ke amount_
-    this.version(26).stores(DEXIE_SCHEMA);
+    /**
+     * Versi 27: 
+     * 1. Mendukung penamaan kolom seragam (amount_total, dsb)
+     * 2. Mendukung status transaksi baru (partial)
+     * 3. Penambahan index untuk performa query hutang/piutang
+     */
+    this.version(27).stores(DEXIE_SCHEMA);
   }
 }
 
 export const db = new SinarPagiDB();
 
 export const generateUID = (): ID => {
+  // Menggunakan crypto.randomUUID jika tersedia (modern browser/Android WebView baru)
+  // Fallback ke math random jika di lingkungan lama
   const randomPart = typeof crypto !== 'undefined' && crypto.randomUUID 
     ? crypto.randomUUID().split('-')[0] 
     : Math.random().toString(36).substring(2, 7);
