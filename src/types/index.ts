@@ -10,6 +10,20 @@ export interface WholesaleConfig {
   wholesale_price: number;
 }
 
+export type StockMutationType = 'IN' | 'OUT' | 'ADJUSTMENT' | 'RETURN';
+
+export interface StockLog {
+  id: string;
+  productId: string;
+  type: StockMutationType;
+  prevQty: number;
+  changeQty: number;
+  finalQty: number;
+  referenceId?: string;
+  note?: string;
+  timestamp: number;
+}
+
 export interface Product {
   id: ID;
   code: string;
@@ -86,6 +100,7 @@ export interface CartItem {
   unit: string;
   price_modal: number;
   price_sell: number;
+  qty_reduce: number;
   extraCharge: number;
   extraChargeQty: number;
   extraChargeName?: string;

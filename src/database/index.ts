@@ -9,6 +9,7 @@ import type {
   DigitalTransaction,
   AppSettings,
   DebtRecord,
+  StockLog,
   ID 
 } from '@/types';
 
@@ -22,7 +23,8 @@ export const DEXIE_SCHEMA = {
   services: 'id, name, price',
   digital_transactions: 'id, timestamp',
   settings: 'id',
-  debts: 'id, transactionId, memberId, status, dueDate' 
+  debts: 'id, transactionId, memberId, status, dueDate' ,
+  stock_logs: 'id, productId, type, timestamp'
 };
 
 export const DB_TABLES = Object.keys(DEXIE_SCHEMA);
@@ -38,10 +40,11 @@ export class SinarPagiDB extends Dexie {
   digital_transactions!: Table<DigitalTransaction>;
   settings!: Table<AppSettings>;
   debts!: Table<DebtRecord>;
+  stock_logs!: Table<StockLog>;
 
   constructor() {
     super('SinarPagiDB');
-    this.version(24).stores(DEXIE_SCHEMA);
+    this.version(25).stores(DEXIE_SCHEMA);
   }
 }
 

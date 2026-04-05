@@ -15,6 +15,7 @@ export const useCartStore = defineStore('cart', () => {
   const searchQuery = ref<string>("");
   const totalBelanja = computed(() => calculateCartTotal(items.value));
   const kembalian = computed(() => calculateChange(cashAmount.value, totalBelanja.value));
+
   const clearSearch = () => {
     searchQuery.value = "";
   };
@@ -86,7 +87,7 @@ export const useCartStore = defineStore('cart', () => {
     }
   };
 
-    const processCheckout = async () => {
+  const processCheckout = async () => {
     const transactionId = generateUID();
     const now = new Date();
     const transactionData: Transaction = {
@@ -98,23 +99,37 @@ export const useCartStore = defineStore('cart', () => {
       paymentMethod: paymentMethod.value,
       amountPaid: cashAmount.value,
       change: kembalian.value,
-      status: 'success',
+      status: TRANSACTION_STATUS.SUCCESS,
       items: deepCopy(items.value)
     };
 
     try {
-      await db.transaction('rw', [db.transactions, db.products], async () => {
+      await db.transaction('rw', [db.transactions, db.products, db.stock_logs], async () => {
         await db.transactions.add(transactionData);
 
         for (const item of items.value) {
           const p = await db.products.get(item.id);
+          
           if (p) {
             const multiplier = item.qty_reduce || 1;
             const totalReduce = item.qty * multiplier;
+            const finalQty = p.qty - totalReduce;
 
             await db.products.update(item.id, {
-              qty: p.qty - totalReduce,
+              qty: finalQty,
               updatedAt: now.toISOString()
+            });
+
+            await db.stock_logs.add({
+              id: generateUID(),
+              productId: item.id,
+              type: 'OUT',
+              prevQty: p.qty,
+              changeQty: totalReduce,
+              finalQty: finalQty,
+              referenceId: transactionId,
+              note: `Penjualan: ${item.name} ${item.qty_reduce && item.qty_reduce > 1 ? '(Grosir/Paket)' : ''}`,
+              timestamp: now.getTime()
             });
           }
         }
