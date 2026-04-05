@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { db, generateUID } from '@/database';
-import type { CartItem, Product, Transaction, PaymentMethod, StockMutationType } from '@/types';
+import type { CartItem, Product, Transaction, PaymentMethod, StockMutationType, DebtRecord } from '@/types';
 import { calculateCartTotal, calculateChange } from '@/utils/calculators';
 import { deepCopy } from '@/utils/formatters';
 import { TRANSACTION_STATUS } from '@/constants/app';
@@ -13,7 +13,6 @@ export const useCartStore = defineStore('cart', () => {
   const isScannerOpen = ref(false);
   const selectedMemberId = ref<string | null>(null);
   const searchQuery = ref<string>("");
-  
   const totalBelanja = computed(() => calculateCartTotal(items.value));
   const kembalian = computed(() => calculateChange(cashAmount.value, totalBelanja.value));
 
@@ -23,6 +22,14 @@ export const useCartStore = defineStore('cart', () => {
 
   const toggleScanner = (status: boolean) => {
     isScannerOpen.value = status;
+  };
+
+  const resetCart = () => {
+    items.value = [];
+    cashAmount.value = 0;
+    selectedMemberId.value = null;
+    paymentMethod.value = 'Tunai';
+    searchQuery.value = "";
   };
 
   const updateQty = (cartId: string, change: number) => {
@@ -89,8 +96,13 @@ export const useCartStore = defineStore('cart', () => {
   };
 
   const processCheckout = async () => {
+    if (paymentMethod.value === 'Tempo' && !selectedMemberId.value) {
+      throw new Error("Pelanggan (Member) wajib dipilih untuk metode pembayaran Tempo.");
+    }
+
     const transactionId = generateUID();
     const now = new Date();
+    
     const transactionData: Transaction = {
       id: transactionId,
       date: now.toISOString(),
@@ -98,15 +110,32 @@ export const useCartStore = defineStore('cart', () => {
       total: totalBelanja.value,
       memberId: selectedMemberId.value,
       paymentMethod: paymentMethod.value,
-      amountPaid: cashAmount.value,
-      change: kembalian.value,
+      amountPaid: paymentMethod.value === 'Tempo' ? 0 : cashAmount.value,
+      change: paymentMethod.value === 'Tempo' ? 0 : kembalian.value,
       status: TRANSACTION_STATUS.SUCCESS,
       items: deepCopy(items.value)
     };
 
     try {
-      await db.transaction('rw', [db.transactions, db.products, db.stock_logs], async () => {
+      await db.transaction('rw', [db.transactions, db.products, db.stock_logs, db.debts], async () => {
         await db.transactions.add(transactionData);
+
+        if (paymentMethod.value === 'Tempo' && selectedMemberId.value) {
+          const dueDate = new Date();
+          dueDate.setDate(dueDate.getDate() + 30);
+
+          const debtData: DebtRecord = {
+            id: generateUID(),
+            transactionId: transactionId,
+            memberId: selectedMemberId.value,
+            total_debt: totalBelanja.value,
+            remaining_debt: totalBelanja.value,
+            dueDate: dueDate.toISOString(),
+            status: 'unpaid',
+            createdAt: now.toISOString()
+          };
+          await db.debts.add(debtData);
+        }
 
         for (const item of items.value) {
           const p = await db.products.get(item.id);
@@ -131,7 +160,7 @@ export const useCartStore = defineStore('cart', () => {
               price_modal: item.price_modal,
               price_sell: item.price_sell,
               referenceId: transactionId,
-              note: `Jual ${item.qty} ${multiplier > 1 ? 'Paket' : item.unit} (@${multiplier} ${item.unit})`,
+              note: `Jual ${item.qty} ${multiplier > 1 ? 'Paket' : item.unit} (@${multiplier} ${item.unit}). Total: -${totalReduce} ${item.unit}`,
               timestamp: now.getTime()
             });
           }
@@ -179,14 +208,6 @@ export const useCartStore = defineStore('cart', () => {
       console.error("Gagal melakukan koreksi stok:", error);
       throw error;
     }
-  };
-
-  const resetCart = () => {
-    items.value = [];
-    cashAmount.value = 0;
-    selectedMemberId.value = null;
-    paymentMethod.value = 'Tunai';
-    searchQuery.value = "";
   };
 
   return { 

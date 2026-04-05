@@ -85,6 +85,7 @@ export interface DebtRecord {
   remaining_debt: number;
   dueDate: ISODataString;
   status: DebtStatus;
+  createdAt: ISODataString;
 }
 
 export interface ServiceItem {
