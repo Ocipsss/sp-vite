@@ -1,0 +1,74 @@
+Skema yang kamu buat sudah sangat detail dan menunjukkan bahwa kamu sudah memikirkan alur bisnis **Sinar Pagi** secara mendalam. Sebagai catatan "kotor", ini sudah sangat "bersih" dan siap untuk masuk ke tahap koding.
+
+Namun, sebagai pendamping pengembang, saya menemukan beberapa **titik kritis** yang jika tidak diperbaiki sekarang, akan menyulitkanmu saat fitur sinkronisasi Firestore atau laporan laba-rugi mulai dijalankan.
+
+Berikut adalah pemeriksaan dan saran perbaikan untuk skema kamu:
+
+---
+
+## 1. Modul Master Data (Katalog)
+* **Tabel `produk`**:
+    * **Saran**: Tambahkan kolom `tipe_produk` (String: 'fisik' atau 'digital'). Ini berguna agar sistem tahu produk mana yang harus memotong stok dan mana yang tidak (seperti jasa).
+* **Tabel `satuan_produk`**:
+    * **Koreksi Penting**: Kamu punya `harga_beli` di sini. Hati-hati, harga beli biasanya berubah-ubah sesuai agen. Disarankan `harga_beli` di sini adalah **harga modal acuan** (rata-rata), sedangkan harga beli asli dicatat di `transaksi_detail` saat barang masuk/keluar.
+* **Tabel `metode_pembayaran`**:
+    * **Saran**: Tambahkan kolom `kode_akun` (String). Ini akan sangat membantu jika nanti kamu ingin melakukan pembukuan (akuntansi) yang lebih rapi (misal: masuk ke Kas Tunai atau Bank BCA).
+
+## 2. Modul Operasional & Stok
+* **Tabel `stok`**:
+    * **Titik Kritis**: Kamu menggunakan `id_satuan` di tabel stok. Dalam *best practice* retail, stok di database sebaiknya disimpan dalam **satuan terkecil (eceran/pcs)**. 
+    * **Kenapa?** Jika kamu punya 1 Dus (isi 24) dan terjual 1 Pcs, menghitung sisa stok dalam satuan campuran (Dus + Pcs) di database itu sangat rumit. 
+    * **Solusi**: Simpan `jumlah` selalu dalam Pcs. Gunakan `faktor_konversi` dari tabel `satuan_produk` hanya untuk tampilan di layar (UI).
+
+## 3. Modul Penjualan & Layanan
+* **Tabel `transaksi`**:
+    * **Saran**: Tambahkan `total_laba` (number). 
+    * **Kenapa?** Menghitung laba secara *real-time* saat transaksi selesai dan menyimpannya di tabel transaksi akan membuat laporan bulananmu menjadi **100x lebih cepat** daripada harus menghitung ulang dari tabel `transaksi_detail` setiap saat.
+* **Tabel `transaksi_detail`**:
+    * **Koreksi**: Kamu sudah benar mencantumkan `harga_beli_saat_ini`. Ini adalah kunci akurasi laba-rugi. Pastikan ini adalah harga modal per 1 unit terkecil.
+* **Tabel `transaksi_layanan_digital`**:
+    * **Saran**: Tambahkan `id_transaksi_induk` (Nullable). Seringkali pelanggan beli kopi (fisik) sekaligus top-up pulsa (digital). Jika ada ID ini, kamu bisa mencetak mereka dalam satu struk yang sama.
+
+## 4. Modul Pelanggan & Keuangan
+* **Tabel `hutang`**:
+    * **Saran**: Tambahkan `id_kasir_pemberi_hutang`. Ini penting untuk audit jika ada bon yang diragukan keasliannya.
+* **Tabel `pembayaran_hutang`**:
+    * **Saran**: Tambahkan `metode_pembayaran` (misal: bayar hutang lewat transfer atau tunai).
+
+## 5. Modul Audit & Pelaporan
+* **Tabel `log_aktivitas`**:
+    * **Saran**: Gunakan format JSON string untuk `data_sebelumnya` dan `data_sesudah`. Dexie/SQLite bisa menyimpan string panjang, tapi jangan lupa fitur hapus otomatis (pruning) log yang sudah lebih dari 3 bulan agar database tidak bengkak.
+
+---
+
+### 🛠️ Penyesuaian untuk Firestore & Dexie (Penting!)
+
+Karena kamu akan menggunakan **Firestore**, ada dua kolom "Wajib" yang harus ada di **SETIAP** tabel agar sinkronisasi tidak kacau:
+
+1.  **`updated_at` (number/timestamp)**: Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+2.  **`is_deleted` (boolean)**: Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
+
+---
+
+### Ringkasan Penambahan Kolom (Bisa langsung dicopas ke catatanmu):
+
+```markdown
+# Tambahan Global (Wajib untuk semua tabel):
+- updated_at : number (Timestamp terakhir diubah)
+- is_deleted : boolean (Soft delete untuk sinkronisasi cloud)
+
+# Tambahan Spesifik:
+Tabel produk:
+- tipe_produk : string ('fisik' | 'digital')
+
+Tabel transaksi:
+- total_laba : number (Simpan langsung di sini untuk laporan cepat)
+
+Tabel transaksi_detail:
+- diskon_item : number (Jika ada diskon per barang)
+
+Tabel stok:
+- jumlah : number (Wajib konversi ke satuan terkecil/pcs agar kalkulasi konsisten)
+```
+
+**Apakah skemanya sudah terasa cukup solid?** Jika iya, langkah selanjutnya adalah menentukan **Schema Versioning** di Dexie.js sebelum kamu menulis baris kode pertama. Mau saya bantu buatkan draf kode `db.ts` berdasarkan skema final ini?
