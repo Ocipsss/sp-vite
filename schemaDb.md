@@ -14,9 +14,9 @@ Ini adalah data "dasar" atau pondasi. Tabel di sini jarang berubah, kecuali ada 
 - id_produk : String | Menghubungkan ke tabel produk.
 - nama_satuan : String | Contoh: 'Dus', 'Pak', 'Pcs'.
 - faktor_konversi : Number | Jumlah isi dalam satuan ini (misal: 1 Dus isi 24).
-- harga_beli : Decimal | Harga Modal dalam satuan pcs (selalu konversi ke satuan terkecil/pcs)
-- harga_jual : Decimal | Harga khusus untuk satuan ini.
-- harga_member : Decimal | Harga khusus untuk Member. (OPSIONAL)
+- harga_beli : number | Harga Modal dalam satuan pcs (selalu konversi ke satuan terkecil/pcs)
+- harga_jual : number | Harga khusus untuk satuan ini.
+- harga_member : number | Harga khusus untuk Member. (OPSIONAL)
 - satuan_dasar : Boolean | Tandai true jika ini adalah satuan terkecil (eceran).
 
 # kategori:
@@ -26,7 +26,7 @@ Ini adalah data "dasar" atau pondasi. Tabel di sini jarang berubah, kecuali ada 
 # metode_pembayaran:
 - id : String | Primary Key (Contoh: 'TUNAI', 'QRIS', 'TEMPO').
 - nama_metode : String | Nama yang muncul di tombol kasir (Contoh: 'TUNAI', 'QRIS', 'TEMPO').
-- biaya_tambahan : Decimal | Jika ada biaya admin tambahan untuk metode ini (misal: mesin EDC +1%). (OPSIONAL)
+- biaya_tambahan : number | Jika ada biaya admin tambahan untuk metode ini (misal: mesin EDC +1%). (OPSIONAL)
 - status_aktif : Boolean | Untuk mengaktifkan atau mematikan metode bayar tertentu.
 - kategori_metode : String | Pengelompokan (Contoh: 'Cash', 'Digital', 'Piutang').
 
@@ -37,7 +37,7 @@ Ini adalah data "dasar" atau pondasi. Tabel di sini jarang berubah, kecuali ada 
 - kata_sandi : String | Password (disimpan dalam bentuk hash/terenkripsi).
 - peran : String | Tingkatan akses (Contoh: 'Admin', 'Kasir').
 - status_aktif : Boolean | Menentukan apakah user tersebut masih boleh login.
-- dibuat_pada : Timestamp | Tanggal akun kasir dibuat.
+- dibuat_pada : number | Tanggal akun kasir dibuat.
 
 
 # 2. Modul Operasional & Stok
@@ -47,15 +47,15 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id : String | Primary Key.
 - id_produk : String | Referensi ke tabel produk.
 - id_satuan : String | Menghubungkan ke tabel satuan_produk (menjelaskan apakah stok yang diinput dalam hitungan Pcs, Dus, atau Pak).
-- jumlah : Decimal | Total stok yang tersedia.
-- tanggal_kadaluarsa : Timestamp | Jika barang memiliki masa berlaku. (OPSIONAL)
+- jumlah : number | Total stok yang tersedia.
+- tanggal_kadaluarsa : number | Jika barang memiliki masa berlaku. (OPSIONAL)
 - lokasi_rak : String | Contoh: "Rak A1" atau "Gudang Depan". (OPSIONAL)
 
 # agen:
 - id : String | Primary Key (ID unik agen).
 - nama_agen : String | Nama toko atau nama sales (Contoh: 'Agen Sembako H. Mamat').
 - nomor_telepon : String | Nomor kontak untuk memesan barang.
-- alamat : Text | Lokasi agen tersebut.
+- alamat : string | Lokasi agen tersebut.
 - keterangan : String | Catatan (misal: 'Bisa antar barang', 'Hanya terima tunai').
 
 # harga_agen:
@@ -63,8 +63,8 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id_agen : String | Referensi ke tabel agen.
 - id_produk : String | Referensi ke tabel produk.
 - id_satuan : String | Referensi ke tabel satuan_produk (misal: Harga per 'Dus').
-- harga_beli : Decimal | Harga modal yang ditawarkan agen tersebut.
-- terakhir_update : Timestamp | Tanggal terakhir harga ini diperbarui.
+- harga_beli : number | Harga modal yang ditawarkan agen tersebut.
+- terakhir_update : number | Tanggal terakhir harga ini diperbarui.
 
 
 # 3. Modul Penjualan & Layanan (Transaksi)
@@ -73,13 +73,13 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id : String | Primary Key (ID unik transaksi).
 - id_member : String | Jika pembeli adalah member, kolom ini diisi. Jika pembeli umum (non-member), kolom ini dibiarkan kosong (null). (OPSIONAL)
 - nomor_struk : String | Nomor nota (Contoh: POS-202310-0001).
-- total_harga : Decimal | Total belanja setelah diskon/pajak.
+- total_harga : number | Total belanja setelah diskon/pajak.
 - metode_pembayaran : String | "Contoh: 'Tunai', 'QRIS', 'Tempo'.
 - status_sinkronisasi : Boolean | "true jika sudah terkirim ke cloud, false jika masih di lokal.
 - id_kasir : String | Menghubungkan ke tabel user/kasir yang bertugas.
-- dibuat_pada : Timestamp | Tanggal dan waktu transaksi terjadi.
-- total_bayar : Decimal | Nominal uang yang diterima dari pelanggan (misal: bayar dengan uang Rp50.000).
-- kembalian : Decimal | Selisih antara total_bayar dengan total_harga yang dikembalikan ke pelanggan.
+- dibuat_pada : number | Tanggal dan waktu transaksi terjadi.
+- total_bayar : number | Nominal uang yang diterima dari pelanggan (misal: bayar dengan uang Rp50.000).
+- kembalian : number | Selisih antara total_bayar dengan total_harga yang dikembalikan ke pelanggan.
 
 # transaksi_detail:
 - id : String | Primary Key.
@@ -87,36 +87,36 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id_produk : String | Produk apa yang dibeli.
 - nama_satuan : String | Satuan yang dipilih saat beli (Pcs/Dus).
 - jumlah : Number | Berapa banyak yang dibeli.
-- harga_beli_saat_ini : Decimal | Pastikan diisi dengan harga beli per item saat itu. Ini krusial agar laporan laba rugi Anda tetap akurat meskipun bulan depan harga dari agen naik.
-- harga_jual_saat_ini : Decimal | Harga barang saat transaksi (penting jika besok harga naik).
+- harga_beli_saat_ini : number | Pastikan diisi dengan harga beli per item saat itu. Ini krusial agar laporan laba rugi Anda tetap akurat meskipun bulan depan harga dari agen naik.
+- harga_jual_saat_ini : number | Harga barang saat transaksi (penting jika besok harga naik).
 - id_layanan_tambahan : String | (Nullable) Menghubungkan ke tabel layanan_tambahan.
-- biaya_layanan_saat_ini : Decimal | 
+- biaya_layanan_saat_ini : number | 
 - catatan_khusus : String | Contoh: "Mie mateng banget" atau "Kopi tanpa gula".
-- subtotal : Decimal | Total: (Jumlah x Harga Barang) + Biaya Tambahan.
+- subtotal : number | Total: (Jumlah x Harga Barang) + Biaya Tambahan.
 
 # layanan_digital:
 - id : String | Primary Key.
 - nama_layanan : String | Contoh: 'Topup DANA', 'PLN Prabayar', 'Tarik Tunai'.'Setor Tunai'.
-- biaya_admin : Decimal | Biaya jasa yang dikenakan ke pelanggan (keuntungan Anda).
+- biaya_admin : number | Biaya jasa yang dikenakan ke pelanggan (keuntungan Anda).
 - id_kategori : String | Referensi ke tabel kategori (misal kategori: 'Jasa Layanan Digital').
 
 # transaksi_layanan_digital:
 - id : String | Primary Key.
 - id_layanan_digital : String | Referensi ke tabel layanan_digital.
 - nomor_tujuan : String | Nomor HP, ID Pelanggan, atau Nomor Rekening.
-- nominal_transaksi : Decimal | Jumlah uang yang ditarik/disetor/topup (di luar admin).
-- biaya_admin_saat_ini : Decimal | Biaya admin saat transaksi dilakukan.
-- total_bayar : Decimal | Hasil dari (nominal_transaksi + biaya_admin_saat_ini).
+- nominal_transaksi : number | Jumlah uang yang ditarik/disetor/topup (di luar admin).
+- biaya_admin_saat_ini : number | Biaya admin saat transaksi dilakukan.
+- total_bayar : number | Hasil dari (nominal_transaksi + biaya_admin_saat_ini).
 - metode_pembayaran : String | Supaya Anda tahu uang hasil top-up itu masuk ke laci kasir (Tunai) atau masuk ke saldo bank Anda (QRIS).
 - id_member : String | Referensi ke tabel member (opsional).
 - id_kasir : String | Referensi ke tabel pengguna.
 - status_transaksi : String | 'Berhasil', 'Gagal', 'Pending'.
-- dibuat_pada : Timestamp | Waktu transaksi.
+- dibuat_pada : number | Waktu transaksi.
 
 # layanan_tambahan:
 - id : String | Primary Key (Contoh: 'masak', 'seduh').
 - nama_layanan : String | Nama jasa (Contoh: 'Jasa Masak Mie', 'Seduh Air Panas').
-- biaya_tambahan : Decimal | Harga jasanya (Contoh: Rp2.000 untuk masak).
+- biaya_tambahan : number | Harga jasanya (Contoh: Rp2.000 untuk masak).
 
 # kategori_layanan:
 - id : String | Primary Key.
@@ -131,25 +131,25 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - kode_member : String | Kode unik kartu member atau nomor HP (untuk pencarian cepat).
 - nama_pelanggan : String | Nama lengkap member.
 - nomor_telepon : String | Untuk keperluan kontak atau pengiriman struk digital.
-- alamat : Text | Alamat tempat tinggal member. (OPSIONAL)
+- alamat : string | Alamat tempat tinggal member. (OPSIONAL)
 - total_poin : Number | Akumulasi poin yang bisa ditukar dengan hadiah/diskon.
-- tanggal_registrasi : Timestamp | Tanggal saat member pertama kali mendaftar.
+- tanggal_registrasi : number | Tanggal saat member pertama kali mendaftar.
 - status_aktif : Boolean | Untuk mematikan member jika sudah tidak berlangganan.
 
 # hutang:
 - id : String | Primary Key.
 - id_member : String | Referensi ke tabel member (Siapa yang berhutang).
 - id_transaksi : String | Referensi ke tabel transaksi (Dari belanjaan yang mana).
-- total_hutang : Decimal | Jumlah total hutang awal dari transaksi tersebut.
-- sisa_hutang : Decimal | Jumlah yang masih harus dibayar (berkurang jika dicicil).
+- total_hutang : number | Jumlah total hutang awal dari transaksi tersebut.
+- sisa_hutang : number | Jumlah yang masih harus dibayar (berkurang jika dicicil).
 - tanggal_jatuh_tempo : Date | Tanggal batas akhir pembayaran (opsional).
 - status_lunas : Boolean | true jika sudah bayar semua, false jika masih ada sisa.
 
 # pembayaran_hutang:
 - id : String | Primary Key.
 - id_hutang : String | Referensi ke tabel hutang.
-- jumlah_bayar : Decimal | Nominal uang yang dibayarkan saat mencicil.
-- tanggal_bayar : Timestamp | Waktu saat cicilan diterima.
+- jumlah_bayar : number | Nominal uang yang dibayarkan saat mencicil.
+- tanggal_bayar : number | Waktu saat cicilan diterima.
 - id_kasir : String | Kasir yang menerima uang cicilan.
 
 
@@ -161,16 +161,16 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - aksi : String | Jenis tindakan (Contoh: 'HAPUS_TRANSAKSI', 'UBAH_STOK', 'LOGIN').
 - tabel_terkait : String | Nama tabel yang dimodifikasi (Contoh: 'transaksi', 'stok').
 - id_data_terkait : String | ID dari baris data yang diubah (misal ID transaksi yang dihapus).
-- data_sebelumnya : Text/JSON | Nilai data sebelum diubah (penting untuk pembuktian).
-- data_sesudah : Text/JSON | Nilai data setelah diubah.
+- data_sebelumnya : string/JSON | Nilai data sebelum diubah (penting untuk pembuktian).
+- data_sesudah : string/JSON | Nilai data setelah diubah.
 - perangkat : String | Info perangkat (Contoh: 'Tablet-Kasir-01').
-- dibuat_pada : Timestamp | Waktu persis kejadian.
+- dibuat_pada : number | Waktu persis kejadian.
 
 # ringkasan_bulanan:
 - id : String | Primary Key (Contoh: '2026-04').
-- total_omzet : Decimal | Total penjualan kotor bulan itu.
-- total_laba : Decimal | Total keuntungan bersih bulan itu.
-- total_pengeluaran : Decimal | Jika Anda mencatat biaya listrik/gaji karyawan.
+- total_omzet : number | Total penjualan kotor bulan itu.
+- total_laba : number | Total keuntungan bersih bulan itu.
+- total_pengeluaran : number | Jika Anda mencatat biaya listrik/gaji karyawan.
 
 
 # INDEXING"
