@@ -5,9 +5,12 @@ Ini adalah data "dasar" atau pondasi. Tabel di sini jarang berubah, kecuali ada 
 - id : string | Primary Key (saran: gunakan UUID atau ID dari Firestore).
 - kode_produk : String | Kode unik/Barcode (SKU). Digunakan untuk scan barcode.
 - nama_produk : String | Nama lengkap barang (Contoh: Kopi Kapal Api 20gr).
+- tipe_produk : String: ('fisik' atau 'digital') | berguna agar sistem tahu produk mana yang harus memotong stok dan mana yang tidak (seperti jasa).
 - id_kategori : String | Menghubungkan ke tabel kategori (misal: Minuman).
 - merk : String | Nama brand barang tersebut.
 - gambar : String | URL atau path foto produk (opsional).
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # satuan_produk:
 - id : String | ID unik untuk baris ini.
@@ -18,19 +21,29 @@ Ini adalah data "dasar" atau pondasi. Tabel di sini jarang berubah, kecuali ada 
 - harga_jual : number | Harga khusus untuk satuan ini.
 - harga_member : number | Harga khusus untuk Member. (OPSIONAL)
 - satuan_dasar : Boolean | Tandai true jika ini adalah satuan terkecil (eceran).
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # kategori:
 - id : String | Primary Key (misal: makanan, obat, atk).
 - nama_kategori : String | Nama yang muncul di layar (Contoh: Kebutuhan Pokok).
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # metode_pembayaran:
 - id : String | Primary Key (Contoh: 'TUNAI', 'QRIS', 'TEMPO').
 - nama_metode : String | Nama yang muncul di tombol kasir (Contoh: 'TUNAI', 'QRIS', 'TEMPO').
+- kode_akun : String | akan sangat membantu jika nanti kamu ingin melakukan pembukuan (akuntansi) yang lebih rapi (misal: masuk ke Kas Tunai atau Bank BCA).
 - biaya_tambahan : number | Jika ada biaya admin tambahan untuk metode ini (misal: mesin EDC +1%). (OPSIONAL)
 - status_aktif : Boolean | Untuk mengaktifkan atau mematikan metode bayar tertentu.
 - kategori_metode : String | Pengelompokan (Contoh: 'Cash', 'Digital', 'Piutang').
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
-# pengguna: (OPSIONAL)
+# pengguna: (OPSIONAL) | Password: Untuk tabel pengguna, pastikan Anda menggunakan library seperti bcryptjs atau argon2 untuk hashing sebelum disimpan ke IndexedDB (meskipun ini perangkat pribadi, tetaplah menjaga standar keamanan).
+
 - id : String | Primary Key (ID unik pengguna).
 - nama_pengguna : String | Username untuk login.
 - nama_lengkap : String | Nama asli staf/kasir.
@@ -38,6 +51,8 @@ Ini adalah data "dasar" atau pondasi. Tabel di sini jarang berubah, kecuali ada 
 - peran : String | Tingkatan akses (Contoh: 'Admin', 'Kasir').
 - status_aktif : Boolean | Menentukan apakah user tersebut masih boleh login.
 - dibuat_pada : number | Tanggal akun kasir dibuat.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # pengaturan_toko:
 - id : String | Biasanya cuma satu baris (id: 'config').
@@ -47,6 +62,8 @@ Ini adalah data "dasar" atau pondasi. Tabel di sini jarang berubah, kecuali ada 
 - logo_toko : String | URL/Base64 logo jika ingin pakai gambar.
 - device_address_printer : string | Menyimpan ID/Alamat Bluetooth printer terakhir yang terhubung.
 - lebar_kertas : number | 58 atau 80 (untuk menyesuaikan layout struk).
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 
 # 2. Modul Operasional & Stok
@@ -56,9 +73,12 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id : String | Primary Key.
 - id_produk : String | Referensi ke tabel produk.
 - id_satuan : String | Menghubungkan ke tabel satuan_produk (menjelaskan apakah stok yang diinput dalam hitungan Pcs, Dus, atau Pak).
+- satuan_dasar : String | menyimpan jumlah dalam satuan terkecil (satuan_dasar).
 - jumlah : number | Total stok yang tersedia.
 - tanggal_kadaluarsa : number | Jika barang memiliki masa berlaku. (OPSIONAL)
 - lokasi_rak : String | Contoh: "Rak A1" atau "Gudang Depan". (OPSIONAL)
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # agen:
 - id : String | Primary Key (ID unik agen).
@@ -66,6 +86,8 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - nomor_telepon : String | Nomor kontak untuk memesan barang.
 - alamat : string | Lokasi agen tersebut.
 - keterangan : String | Catatan (misal: 'Bisa antar barang', 'Hanya terima tunai').
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # harga_agen:
 - id : String | Primary Key.
@@ -74,6 +96,8 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id_satuan : String | Referensi ke tabel satuan_produk (misal: Harga per 'Dus').
 - harga_beli : number | Harga modal yang ditawarkan agen tersebut.
 - terakhir_update : number | Tanggal terakhir harga ini diperbarui.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 
 # 3. Modul Penjualan & Layanan (Transaksi)
@@ -83,12 +107,15 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id_member : String | Jika pembeli adalah member, kolom ini diisi. Jika pembeli umum (non-member), kolom ini dibiarkan kosong (null). (OPSIONAL)
 - nomor_struk : String | Nomor nota (Contoh: POS-202310-0001).
 - total_harga : number | Total belanja setelah diskon/pajak.
+- total_laba : Number | Menghitung laba secara *real-time* saat transaksi selesai dan menyimpannya di tabel transaksi akan membuat laporan bulananmu menjadi **100x lebih cepat** daripada harus menghitung ulang dari tabel `transaksi_detail` setiap saat.
 - metode_pembayaran : String | "Contoh: 'Tunai', 'QRIS', 'Tempo'.
 - status_sinkronisasi : Boolean | "true jika sudah terkirim ke cloud, false jika masih di lokal.
 - id_kasir : String | Menghubungkan ke tabel user/kasir yang bertugas.
 - dibuat_pada : number | Tanggal dan waktu transaksi terjadi.
 - total_bayar : number | Nominal uang yang diterima dari pelanggan (misal: bayar dengan uang Rp50.000).
 - kembalian : number | Selisih antara total_bayar dengan total_harga yang dikembalikan ke pelanggan.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # transaksi_detail:
 - id : String | Primary Key.
@@ -102,12 +129,16 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - biaya_layanan_saat_ini : number | 
 - catatan_khusus : String | Contoh: "Mie mateng banget" atau "Kopi tanpa gula".
 - subtotal : number | Total: (Jumlah x Harga Barang) + Biaya Tambahan.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # layanan_digital:
 - id : String | Primary Key.
 - nama_layanan : String | Contoh: 'Topup DANA', 'PLN Prabayar', 'Tarik Tunai'.'Setor Tunai'.
 - biaya_admin : number | Biaya jasa yang dikenakan ke pelanggan (keuntungan Anda).
 - id_kategori : String | Referensi ke tabel kategori (misal kategori: 'Jasa Layanan Digital').
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # transaksi_layanan_digital:
 - id : String | Primary Key.
@@ -121,16 +152,22 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id_kasir : String | Referensi ke tabel pengguna.
 - status_transaksi : String | 'Berhasil', 'Gagal', 'Pending'.
 - dibuat_pada : number | Waktu transaksi.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # layanan_tambahan:
 - id : String | Primary Key (Contoh: 'masak', 'seduh').
 - nama_layanan : String | Nama jasa (Contoh: 'Jasa Masak Mie', 'Seduh Air Panas').
 - biaya_tambahan : number | Harga jasanya (Contoh: Rp2.000 untuk masak).
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # kategori_layanan:
 - id : String | Primary Key.
 - id_kategori : String | Referensi ke tabel kategori.
 - id_layanan_tambahan : String | Referensi ke tabel layanan_tambahan.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 
 # 4. Modul Pelanggan & Keuangan (CRM & Piutang)
@@ -144,6 +181,8 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - total_poin : Number | Akumulasi poin yang bisa ditukar dengan hadiah/diskon.
 - tanggal_registrasi : number | Tanggal saat member pertama kali mendaftar.
 - status_aktif : Boolean | Untuk mematikan member jika sudah tidak berlangganan.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # hutang:
 - id : String | Primary Key.
@@ -153,13 +192,18 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - sisa_hutang : number | Jumlah yang masih harus dibayar (berkurang jika dicicil).
 - tanggal_jatuh_tempo : number | Tanggal batas akhir pembayaran (opsional).
 - status_lunas : Boolean | true jika sudah bayar semua, false jika masih ada sisa.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # pembayaran_hutang:
 - id : String | Primary Key.
 - id_hutang : String | Referensi ke tabel hutang.
 - jumlah_bayar : number | Nominal uang yang dibayarkan saat mencicil.
+- metode_pembayaran_hutang : Number | (misal: bayar hutang lewat transfer atau tunai).
 - tanggal_bayar : number | Waktu saat cicilan diterima.
 - id_kasir : String | Kasir yang menerima uang cicilan.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 
 # 5. Modul Audit & Pelaporan
@@ -170,17 +214,20 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - aksi : String | Jenis tindakan (Contoh: 'HAPUS_TRANSAKSI', 'UBAH_STOK', 'LOGIN').
 - tabel_terkait : String | Nama tabel yang dimodifikasi (Contoh: 'transaksi', 'stok').
 - id_data_terkait : String | ID dari baris data yang diubah (misal ID transaksi yang dihapus).
-- data_sebelumnya : string/JSON | Nilai data sebelum diubah (penting untuk pembuktian).
-- data_sesudah : string/JSON | Nilai data setelah diubah.
+- data_sebelumnya : JSON | Nilai data sebelum diubah (penting untuk pembuktian).
+- data_sesudah : JSON | Nilai data setelah diubah.
 - perangkat : String | Info perangkat (Contoh: 'Tablet-Kasir-01').
 - dibuat_pada : number | Waktu persis kejadian.
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 # ringkasan_bulanan:
 - id : String | Primary Key (Contoh: '2026-04').
 - total_omzet : number | Total penjualan kotor bulan itu.
 - total_laba : number | Total keuntungan bersih bulan itu.
 - total_pengeluaran : number | Jika Anda mencatat biaya listrik/gaji karyawan.
-
+- updated_at : number/timestamp | Untuk mengetahui data mana yang paling baru jika terjadi konflik antara HP dan Cloud.
+- is_deleted : boolean | Jangan pernah benar-benar menghapus data (`hard delete`) di sistem sinkronisasi. Cukup tandai `true`. Jika kamu hapus permanen di HP, Firestore tidak akan tahu bahwa data itu harus dihapus juga di Cloud.
 
 
 
