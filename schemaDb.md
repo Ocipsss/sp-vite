@@ -142,7 +142,7 @@ Modul ini berfungsi untuk mengelola ketersediaan barang di gudang dan rak toko.
 - id_transaksi : String | Referensi ke tabel transaksi (Dari belanjaan yang mana).
 - total_hutang : number | Jumlah total hutang awal dari transaksi tersebut.
 - sisa_hutang : number | Jumlah yang masih harus dibayar (berkurang jika dicicil).
-- tanggal_jatuh_tempo : Date | Tanggal batas akhir pembayaran (opsional).
+- tanggal_jatuh_tempo : number | Tanggal batas akhir pembayaran (opsional).
 - status_lunas : Boolean | true jika sudah bayar semua, false jika masih ada sisa.
 
 # pembayaran_hutang:
